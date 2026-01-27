@@ -2,15 +2,17 @@ import Stripe from 'stripe'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sendOrderEmail } from '@/lib/mail'; // Importe la fonction
+import { sendOrderEmail } from '@/lib/mail' // On garde ton import
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { typescript: true })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-12-15.clover', // Assure-toi d'avoir la bonne date ici (celle suggérée par VS Code)
+  typescript: true,
+})
 
 export async function POST(req: Request) {
   const body = await req.text()
   
-  // --- CORRECTION NEXT.JS 15 ---
-  // On doit ajouter 'await' devant headers()
+  // Correction Next.js 15 (Tu avais bon !)
   const headersList = await headers()
   const signature = headersList.get('Stripe-Signature') as string
 
@@ -29,7 +31,7 @@ export async function POST(req: Request) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const email = session?.customer_details?.email; // On récupère l'email du client chez Stripe    
+    const email = session?.customer_details?.email
 
     const address = session?.customer_details?.address
     const addressString = [
@@ -43,22 +45,47 @@ export async function POST(req: Request) {
     const orderId = session?.metadata?.orderId
 
     if (orderId && email) {
-        // 1. Mise à jour commande et stock (ton code existant)
+        // 1. Mise à jour commande (Statut payé + Infos client)
         const order = await prisma.order.update({
             where: { id: orderId },
-            data: { isPaid: true, address: addressString, phone: phone },
-            include: { orderItems: { include: { product: true } } }
+            data: { 
+                isPaid: true, 
+                address: addressString, 
+                phone: phone 
+            },
+            include: { 
+                orderItems: { 
+                    include: { product: true } 
+                } 
+            }
         });
 
-        // Calcul du total pour le mail
+        // 2. GESTION DES STOCKS (C'est la partie qui manquait !) 📉
+        // On boucle sur chaque article pour réduire le stock
+        for (const item of order.orderItems) {
+            await prisma.product.update({
+                where: { id: item.productId },
+                data: {
+                    stock: { 
+                        decrement: item.quantity 
+                    }
+                }
+            })
+        }
+
+        // 3. ENVOI DU MAIL AUTOMATIQUE 📧
+        // Calcul du total pour le mail (convertit Decimal en Number)
         const total = order.orderItems.reduce((acc, item) => {
             return acc + (Number(item.product.price) * item.quantity);
         }, 0);
 
-        // 2. ENVOI DU MAIL AUTOMATIQUE 🚀
-        await sendOrderEmail(email, orderId, total);
-        
-        console.log(`✅ Mail de confirmation envoyé à ${email}`);
+        try {
+            await sendOrderEmail(email, orderId, total);
+            console.log(`✅ Mail de confirmation envoyé à ${email}`);
+        } catch (emailError) {
+            console.error("⚠️ Erreur lors de l'envoi de l'email:", emailError);
+            // On ne bloque pas le webhook si l'email échoue, le paiement est déjà validé
+        }
     }
   }
 

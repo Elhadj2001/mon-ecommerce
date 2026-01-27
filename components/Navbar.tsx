@@ -2,7 +2,8 @@
 import Link from 'next/link'
 import MainNav from './MainNav'
 import CartButton from './CartButton' // On importe notre nouveau bouton client
-import { UserButton, SignedIn } from "@clerk/nextjs";
+import { UserButton, SignedIn } from "@clerk/nextjs"
+import SearchBar from './SearchBar'
 
 export default function Navbar() {
   return (
@@ -16,6 +17,11 @@ export default function Navbar() {
             <span className="text-[0.6rem] tracking-[0.2em] text-gray-500 uppercase">Paris · Dakar</span>
           </div>
         </Link>
+
+        {/* Recherche au centre */}
+        <div className="hidden md:block flex-1 max-w-sm mx-8">
+          <SearchBar />
+        </div>
 
         {/* MENU (Dynamique / Serveur) */}
         <MainNav />

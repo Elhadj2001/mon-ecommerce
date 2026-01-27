@@ -1,58 +1,93 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
 import ProductInfo from '@/components/product/ProductInfo'
+import ProductGallery from '@/components/product/ProductGallery'
+import ProductCard from '@/components/ProductCard'
 
 interface ProductPageProps {
   params: Promise<{ id: string }>
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
-  // 1. On attend la résolution des paramètres (Next.js 15)
   const { id } = await params
-
-  // 2. On cherche le produit via Prisma
+  
+  // 1. On récupère le produit principal
   const product = await prisma.product.findUnique({
-    where: { id: id },
+    where: { id },
+    include: {
+      category: true,
+    }
   })
 
-  // 3. Gestion 404
   if (!product) {
     return notFound()
   }
 
+  // 2. CORRECTION DES TYPES ICI 👇
+  // On transforme les données brutes de la DB pour qu'elles collent au Frontend
+  const formattedProduct = {
+    ...product,
+    price: product.price.toNumber(),
+    
+    // Si 'sizes' est null, on renvoie un tableau vide [].
+    // Si c'est du texte "S,M,L", on le coupe en tableau ["S", "M", "L"].
+    sizes: product.sizes ? product.sizes.split(',') : [],
+    
+    // Pareil pour 'colors'
+    colors: product.colors ? product.colors.split(',') : [],
+    
+    // 'images' est déjà un tableau dans ton schema (String[]), donc c'est bon.
+    // Mais par sécurité, si jamais c'est vide/null, on force un tableau vide.
+    images: product.images || []
+  }
+
+  // 3. Produits similaires
+  const suggestedProducts = await prisma.product.findMany({
+    where: {
+      categoryId: product.categoryId,
+      NOT: {
+        id: product.id 
+      }
+    },
+    take: 4,
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
+
   return (
-    <div className="min-h-screen bg-white py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="bg-white">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         
-        {/* Fil d'ariane */}
-        <Link 
-          href="/" 
-          className="mb-8 inline-block text-xs font-bold text-gray-400 hover:text-black uppercase tracking-[0.2em] transition-colors"
-        >
-          ← Retour au catalogue
-        </Link>
-
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:gap-16">
-          {/* Colonne Gauche : Image (Reste statique côté serveur) */}
-          <div className="overflow-hidden rounded-2xl bg-gray-100 aspect-[3/4] relative">
-            <img
-              src={product.images[0]}
-              alt={product.name}
-              className="h-full w-full object-cover object-center hover:scale-105 transition-transform duration-700"
-            />
-          </div>
-
-          {/* Colonne Droite : Infos (Composant Client Interactif) */}
-          <div>
-            <ProductInfo 
-              product={{
-                ...product,
-                price: product.price.toNumber() // Conversion obligatoire du Decimal
-              }} 
-            />
+        {/* SECTION PRINCIPALE */}
+        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+          <ProductGallery images={product.images} />
+          <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
+            {/* TypeScript est content car formattedProduct a maintenant des tableaux ! */}
+            <ProductInfo product={formattedProduct} />
           </div>
         </div>
+
+        {/* SECTION PRODUITS SIMILAIRES */}
+        {suggestedProducts.length > 0 && (
+          <div className="mt-24">
+            <h2 className="text-2xl font-black uppercase tracking-tight text-gray-900 mb-8">
+              Vous aimerez aussi
+            </h2>
+            
+            <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
+              {suggestedProducts.map((relatedProduct) => (
+                <ProductCard 
+                  key={relatedProduct.id} 
+                  data={{
+                    ...relatedProduct,
+                    price: relatedProduct.price.toNumber()
+                  }} 
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
