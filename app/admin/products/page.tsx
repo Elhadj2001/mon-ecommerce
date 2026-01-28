@@ -3,7 +3,13 @@ import { prisma } from '@/lib/prisma'
 import { deleteProduct } from '@/actions/products'
 import AdminToolbar from '@/components/admin/AdminToolbar'
 import Pagination from '@/components/admin/Pagination'
-import StockForm from '@/components/admin/StockForm' // 1. On importe le composant magique
+import StockForm from '@/components/admin/StockForm'
+import { Category, Product } from '@prisma/client'
+
+// On définit le type attendu pour un produit avec sa catégorie incluse
+type ProductWithCategory = Product & {
+  category: Category
+}
 
 interface AdminProductsPageProps {
   searchParams: Promise<{
@@ -27,7 +33,8 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
     ]
   }
 
-  const [totalItems, products, categories] = await Promise.all([
+  // Typage explicite des résultats pour éviter le "any"
+  const [totalItems, products, categories]: [number, ProductWithCategory[], Category[]] = await Promise.all([
     prisma.product.count({ where: whereCondition }),
     prisma.product.findMany({
       where: whereCondition,
@@ -54,14 +61,15 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          {/* Table sans espaces blancs entre les balises pour éviter l'erreur d'hydration */}
+          <table className="w-full text-left text-sm border-collapse">
             <thead className="bg-gray-50 border-b uppercase tracking-wider text-xs font-semibold text-gray-500">
               <tr>
                 <th className="px-6 py-4">Image</th>
                 <th className="px-6 py-4">Nom</th>
                 <th className="px-6 py-4">Catégorie</th>
                 <th className="px-6 py-4">Prix</th>
-                <th className="px-6 py-4">Gestion Stock</th> {/* Titre changé */}
+                <th className="px-6 py-4">Gestion Stock</th>
                 <th className="px-6 py-4 text-right">Action</th>
               </tr>
             </thead>
@@ -70,28 +78,21 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                 <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
-                      {/* Sécurité si pas d'image */}
                       <img 
                         src={product.images[0] || '/placeholder.png'} 
-                        alt="" 
+                        alt={product.name} 
                         className="w-full h-full object-cover" 
                       />
                     </div>
                   </td>
-                  
                   <td className="px-6 py-4 font-bold text-gray-900">{product.name}</td>
-                  
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
                       {product.category.name}
                     </span>
                   </td>
-                  
                   <td className="px-6 py-4 font-medium">{Number(product.price).toFixed(2)} €</td>
-                  
-                  {/* --- 2. ICI ON INSERE LE FORMULAIRE DE STOCK --- */}
                   <td className="px-6 py-4">
-                    {/* On passe une version "compacte" ou on ajuste le CSS du composant si besoin */}
                     <div className="scale-90 origin-left"> 
                       <StockForm 
                         productId={product.id} 
@@ -99,11 +100,10 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                       />
                     </div>
                   </td>
-
                   <td className="px-6 py-4 text-right">
                     <form action={deleteProduct}>
                       <input type="hidden" name="productId" value={product.id} />
-                      <button className="text-gray-400 hover:text-red-600 font-medium transition-colors text-xs uppercase tracking-wide">
+                      <button className="text-gray-400 hover:text-red-600 font-medium transition-colors text-xs uppercase tracking-wide cursor-pointer">
                         Supprimer
                       </button>
                     </form>
@@ -115,10 +115,10 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
         </div>
         
         {products.length === 0 && (
-           <div className="p-12 text-center text-gray-500 flex flex-col items-center">
-             <p className="text-lg font-medium">Aucun résultat</p>
-             <p className="text-sm">Essayez de modifier votre recherche ou vos filtres.</p>
-           </div>
+          <div className="p-12 text-center text-gray-500 flex flex-col items-center">
+            <p className="text-lg font-medium">Aucun résultat</p>
+            <p className="text-sm">Essayez de modifier votre recherche ou vos filtres.</p>
+          </div>
         )}
       </div>
 

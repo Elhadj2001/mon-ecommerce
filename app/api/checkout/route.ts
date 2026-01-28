@@ -72,17 +72,23 @@ export async function POST(req: Request) {
     })
   })
 
+// ...
   const order = await prisma.order.create({
     data: {
-      isPaid: false,
+      isPaid: false, // On attend le webhook pour passer à true
       orderItems: {
         create: items.map((item) => ({
           product: { connect: { id: item.id } },
-          quantity: item.quantity
+          quantity: item.quantity,
+          
+          // --- AJOUTER CES DEUX LIGNES ICI ---
+          size: item.selectedSize || null,  // On sauvegarde la taille choisie
+          color: item.selectedColor || null // On sauvegarde la couleur choisie
         }))
       }
     }
   })
+  // ...
 
   const session = await stripe.checkout.sessions.create({
     line_items,

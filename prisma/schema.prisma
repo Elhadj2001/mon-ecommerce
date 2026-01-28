@@ -71,14 +71,19 @@ model Order {
   updatedAt  DateTime    @updatedAt
 }
 
+
 model OrderItem {
   id        String  @id @default(uuid())
   orderId   String
-  order     Order   @relation(fields: [orderId], references: [id])
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
   product   Product @relation(fields: [productId], references: [id])
-  quantity  Int     @default(1)
+  quantity  Int
+  
+  // --- AJOUTER CES DEUX LIGNES ---
+  size      String?  // Le ? signifie que c'est optionnel (pour les accessoires)
+  color     String?
 
-  @@index([orderId])
+    @@index([orderId])
   @@index([productId])
 }

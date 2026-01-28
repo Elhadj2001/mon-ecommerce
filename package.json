@@ -12,7 +12,7 @@
   "dependencies": {
     "@clerk/localizations": "^3.35.2",
     "@clerk/nextjs": "^6.36.10",
-    "@prisma/client": "^5.10.2",
+    "@prisma/client": "^5.22.0",
     "axios": "^1.13.3",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.563.0",
@@ -33,7 +33,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.4",
-    "prisma": "^5.10.2",
+    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"
