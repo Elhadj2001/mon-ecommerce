@@ -4,11 +4,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // 2. On force Next.js à ignorer les erreurs ESLint
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  // 3. Tes images
+  
+  // 2. Tes images
   images: {
     remotePatterns: [
       {
