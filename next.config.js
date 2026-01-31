@@ -3,9 +3,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true, // <--- C'est la clé du succès
   },
-  eslint: {
-    ignoreDuringBuilds: true, // <--- Ça aussi
-  },
+  
   images: {
     remotePatterns: [
       {
