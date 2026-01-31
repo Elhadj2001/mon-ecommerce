@@ -13,16 +13,21 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const { gender } = await searchParams
   const genderFilter = typeof gender === 'string' ? gender : undefined
 
-  // 1. REQUÊTE INTELLIGENTE : On cherche quels genres existent VRAIMENT dans cette catégorie
-  // On utilise "distinct" pour ne pas récupérer 1000 fois "Homme"
+  // 1. REQUÊTE DISTINCT : Genres disponibles
+  // Note: On ajoute une condition pour ignorer les genres nulls s'il y en a
   const distinctGenders = await prisma.product.findMany({
-    where: { categoryId: id },
+    where: { 
+      categoryId: id,
+      gender: { not: null } 
+    },
     select: { gender: true },
     distinct: ['gender']
   })
 
-  // On transforme le résultat en un tableau simple (ex: ['Homme', 'Femme'])
-  const availableGenders = distinctGenders.map(g => g.gender)
+  // On transforme le résultat en un tableau simple et on filtre les nulls au cas où
+  const availableGenders = distinctGenders
+    .map(g => g.gender)
+    .filter((g): g is string => g !== null)
 
   // 2. On récupère la catégorie et les produits filtrés
   const category = await prisma.category.findUnique({
@@ -30,7 +35,11 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     include: {
       products: {
         where: {
+          // Si genderFilter est undefined, Prisma ignore cette ligne (c'est ce qu'on veut)
           gender: genderFilter 
+        },
+        include: {
+            images: true // <--- INDISPENSABLE !
         },
         orderBy: { createdAt: 'desc' }
       }
@@ -49,10 +58,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     }`
   }
 
-  // Ordre d'affichage souhaité pour les boutons
   const order = ['Homme', 'Femme', 'Enfant', 'Unisexe']
-  
-  // On trie les genres disponibles selon notre ordre préféré
   const sortedGenders = order.filter(g => availableGenders.includes(g))
 
   return (
@@ -70,17 +76,14 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         </div>
       </div>
 
-      {/* --- BARRE DE FILTRES DYNAMIQUE --- */}
-      {/* On n'affiche la barre que s'il y a au moins 2 choix de genre différents */}
+      {/* FILTRES */}
       {availableGenders.length > 1 && (
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-10">
           <div className="flex flex-wrap justify-center gap-3">
-            {/* Bouton "Tout" toujours visible si on filtre */}
             <Link href={`/category/${id}`} className={getFilterStyle(undefined)}>
               Tout
             </Link>
             
-            {/* On génère SEULEMENT les boutons des genres qui existent */}
             {sortedGenders.map((g) => (
               <Link key={g} href={`/category/${id}?gender=${g}`} className={getFilterStyle(g)}>
                 {g}
@@ -104,13 +107,15 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
         ) : (
           <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
             {category.products.map((product) => (
-              <ProductCard 
-                key={product.id} 
-                data={{
-                  ...product,
-                  price: product.price.toNumber()
-                }} 
-              />
+              // Dans app/category/[id]/page.tsx
+
+            <ProductCard 
+              key={product.id} 
+              data={{
+                ...product, // On passe TOUT le produit d'abord
+                price: product.price.toNumber() // On corrige le format du prix ensuite
+              }} 
+            />
             ))}
           </div>
         )}

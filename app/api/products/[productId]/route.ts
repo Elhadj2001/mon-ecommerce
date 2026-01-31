@@ -1,38 +1,76 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+// Importe auth si tu utilises Clerk ou NextAuth pour sécuriser
+// import { auth } from "@clerk/nextjs"; 
 
-// Cette fonction gère la mise à jour (PATCH) d'un produit
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
-    const { productId } = await params
-    const body = await req.json()
+    // 1. On récupère l'ID du produit (Next.js 15 oblige à await params)
+    const { productId } = await params;
     
-    // On récupère la nouvelle valeur du stock depuis le corps de la requête
-    const { stock } = body
+    // 2. On récupère les données envoyées par le formulaire (ex: { stock: 50 })
+    const body = await req.json();
+    
+    // Sécurité basique (facultatif mais recommandé)
+    // const { userId } = auth();
+    // if (!userId) return new NextResponse("Unauthorized", { status: 401 });
 
-    // Vérification de sécurité de base
     if (!productId) {
-      return new NextResponse("Product ID requis", { status: 400 })
+      return new NextResponse("Product ID required", { status: 400 });
     }
 
-    // Mise à jour dans la Base de Données
+    // 3. Mise à jour dans la base de données
     const updatedProduct = await prisma.product.update({
       where: {
-        id: productId
+        id: productId,
       },
       data: {
-        // On convertit en entier pour être sûr (le frontend envoie parfois des strings)
-        stock: parseInt(stock) 
-      }
-    })
+        // On met à jour tout ce qui est envoyé (stock, prix, nom, etc.)
+        ...body,
+        // Conversion de sécurité si on envoie des nombres en string
+        stock: body.stock ? Number(body.stock) : undefined,
+        price: body.price ? Number(body.price) : undefined,
+      },
+    });
 
-    return NextResponse.json(updatedProduct)
-
+    return NextResponse.json(updatedProduct);
+    
   } catch (error) {
-    console.log('[PRODUCT_PATCH]', error)
-    return new NextResponse("Erreur interne", { status: 500 })
+    console.error("[PRODUCT_PATCH]", error);
+    return new NextResponse("Internal Error", { status: 500 });
   }
+}
+
+// Garde tes autres méthodes (GET, DELETE) en dessous si elles existent déjà...
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ productId: string }> }
+) {
+    // ... ton code GET existant
+    // N'oublie pas d'ajouter "await params" ici aussi si ce n'est pas fait
+    const { productId } = await params;
+    
+    const product = await prisma.product.findUnique({
+        where: { id: productId },
+        include: { images: true, category: true }
+    });
+    
+    return NextResponse.json(product);
+}
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ productId: string }> }
+) {
+    // ... ton code DELETE existant
+    const { productId } = await params;
+    
+    const product = await prisma.product.delete({
+        where: { id: productId }
+    });
+    
+    return NextResponse.json(product);
 }

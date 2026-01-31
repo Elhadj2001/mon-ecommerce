@@ -4,11 +4,12 @@ import { deleteProduct } from '@/actions/products'
 import AdminToolbar from '@/components/admin/AdminToolbar'
 import Pagination from '@/components/admin/Pagination'
 import StockForm from '@/components/admin/StockForm'
-import { Category, Product } from '@prisma/client'
+import { Category, Product, Image as ProductImage } from '@prisma/client'
 
-// On définit le type attendu pour un produit avec sa catégorie incluse
-type ProductWithCategory = Product & {
-  category: Category
+// 1. On définit le type attendu pour un produit avec sa catégorie ET ses images incluses
+type ProductWithRelations = Product & {
+  category: Category;
+  images: ProductImage[];
 }
 
 interface AdminProductsPageProps {
@@ -33,15 +34,18 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
     ]
   }
 
-  // Typage explicite des résultats pour éviter le "any"
-  const [totalItems, products, categories]: [number, ProductWithCategory[], Category[]] = await Promise.all([
+  // 2. On récupère les données avec le include: { images: true }
+  const [totalItems, products, categories]: [number, ProductWithRelations[], Category[]] = await Promise.all([
     prisma.product.count({ where: whereCondition }),
     prisma.product.findMany({
       where: whereCondition,
       take: itemsPerPage,
       skip: (currentPage - 1) * itemsPerPage,
       orderBy: { createdAt: 'desc' },
-      include: { category: true }
+      include: { 
+        category: true,
+        images: true // <-- CRUCIAL : Charge les images depuis la DB
+      }
     }),
     prisma.category.findMany({ orderBy: { name: 'asc' } })
   ])
@@ -49,7 +53,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   const totalPages = Math.ceil(totalItems / itemsPerPage)
 
   return (
-    <div>
+    <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Gestion Stock</h1>
         <Link href="/admin/products/new" className="bg-black text-white px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-gray-800 transition shadow-lg">
@@ -59,9 +63,8 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
 
       <AdminToolbar categories={categories} />
 
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden mt-6">
         <div className="overflow-x-auto">
-          {/* Table sans espaces blancs entre les balises pour éviter l'erreur d'hydration */}
           <table className="w-full text-left text-sm border-collapse">
             <thead className="bg-gray-50 border-b uppercase tracking-wider text-xs font-semibold text-gray-500">
               <tr>
@@ -78,8 +81,9 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                 <tr key={product.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="h-12 w-12 rounded-lg bg-gray-100 overflow-hidden border border-gray-200">
+                      {/* 3. Sécurisation de l'affichage de l'image */}
                       <img 
-                        src={product.images[0] || '/placeholder.png'} 
+                        src={product.images?.[0]?.url || '/placeholder.png'} 
                         alt={product.name} 
                         className="w-full h-full object-cover" 
                       />

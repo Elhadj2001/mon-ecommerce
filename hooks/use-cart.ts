@@ -1,12 +1,12 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { toast } from 'react-hot-toast' // L'erreur disparaîtra car on l'utilise plus bas
+import { toast } from 'react-hot-toast'
 
 export interface CartItem {
   id: string
   name: string
   price: number
-  image: string
+  images: string[] 
   quantity: number
   selectedSize?: string
   selectedColor?: string
@@ -28,7 +28,9 @@ export const useCart = create(
       
       addItem: (data) => {
         const currentItems = get().items
+        // Génération de l'ID unique pour différencier les variantes (Taille/Couleur)
         const newCartId = `${data.id}-${data.selectedSize || ''}-${data.selectedColor || ''}`
+        
         const existingItem = currentItems.find((item) => item.cartId === newCartId)
 
         if (existingItem) {
@@ -39,29 +41,27 @@ export const useCart = create(
                 : item
             )
           })
-          // On utilise toast ici !
-          toast.success("Quantité mise à jour dans le panier")
+          toast.success("Quantité mise à jour")
         } else {
           set({ 
-            items: [...get().items, { ...data, cartId: newCartId }] 
+            items: [...currentItems, { ...data, cartId: newCartId }] 
           })
-          // Et ici !
           toast.success("Produit ajouté au panier")
         }
       },
 
-      removeItem: (id) => {
-        set({ items: get().items.filter((item) => item.cartId !== id) })
+      removeItem: (cartId) => {
+        set({ items: get().items.filter((item) => item.cartId !== cartId) })
         toast.error("Produit retiré")
       },
 
-      updateQuantity: (id, quantity) => {
+      updateQuantity: (cartId, quantity) => {
         const currentItems = get().items
         if (quantity <= 0) {
-          set({ items: currentItems.filter((item) => item.cartId !== id) })
+          set({ items: currentItems.filter((item) => item.cartId !== cartId) })
         } else {
           set({ items: currentItems.map((item) => 
-             item.cartId === id ? { ...item, quantity } : item 
+             item.cartId === cartId ? { ...item, quantity } : item 
           )})
         }
       },

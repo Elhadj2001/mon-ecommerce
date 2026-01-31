@@ -1,0 +1,37 @@
+Structure du dossier
+Le numéro de série du volume est 48DB-C81A
+C:.
+|   AddToCartButton.tsx
+|   CartButton.tsx
+|   CartClient.tsx
+|   CartCount.tsx
+|   CartItem.tsx
+|   CategoryMenu.tsx
+|   Footer.tsx
+|   MainNav.tsx
+|   Navbar.tsx
+|   ProductCard.tsx
+|   SearchBar.tsx
+|   structure.txt
+|   
++---admin
+|       AdminToolbar.tsx
+|       ExportButton.tsx
+|       ImageUpload.tsx
+|       Overview.tsx
+|       Pagination.tsx
+|       ProductForm.tsx
+|       StockForm.tsx
+|       
++---gallery
+|       Gallery.tsx
+|       
++---product
+|       ProductClient.tsx
+|       ProductGallery.tsx
+|       ProductInfo.tsx
+|       VariantSelector.tsx
+|       
+\---ui
+        QuantityController.tsx
+        
