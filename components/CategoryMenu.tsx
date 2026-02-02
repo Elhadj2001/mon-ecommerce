@@ -1,86 +1,122 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
-import { ChevronDown, X } from 'lucide-react' // Assure-toi d'avoir installé lucide-react
-
-interface Category {
-  id: string
-  name: string
-}
+import Link from "next/link"
+import { Category } from "@prisma/client"
+import { useState } from "react"
+import { ChevronDown } from "lucide-react"
 
 interface CategoryMenuProps {
   categories: Category[]
 }
 
 export default function CategoryMenu({ categories }: CategoryMenuProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [activeCategory, setActiveCategory] = useState<string | null>(null)
 
-  // Fermer le menu si on clique ailleurs sur la page
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+  // 1. LOGIQUE DE TRI : On garde les 4 premières pour le menu principal, le reste dans "Collections"
+  const DISPLAY_LIMIT = 4
+  const primaryCategories = categories.slice(0, DISPLAY_LIMIT)
+  const moreCategories = categories.slice(DISPLAY_LIMIT)
 
-  // On sépare : Les 3 premières sont visibles, le reste est caché
-  const featured = categories.slice(0, 3)
-  const others = categories.slice(3) // Toutes les autres
+  // Fonction pour fermer le menu
+  const closeMenu = () => setActiveCategory(null)
 
   return (
-    <div className="flex items-center space-x-6" ref={menuRef}>
+    <div className="flex h-full items-center gap-8" onMouseLeave={closeMenu}>
       
-      {/* 1. Les 3 catégories VIP (Visibles tout le temps) */}
-      {featured.map((cat) => (
-        <Link
+      {/* --- A. LES CATÉGORIES PRINCIPALES (Avec filtre Genre au survol) --- */}
+      {primaryCategories.map((cat) => (
+        <div 
           key={cat.id}
-          href={`/category/${cat.id}`}
-          className="text-xs font-bold transition-colors hover:text-black text-gray-500 uppercase tracking-[0.2em]"
+          className="relative h-full flex items-center group"
+          onMouseEnter={() => setActiveCategory(cat.id)}
         >
-          {cat.name}
-        </Link>
+          {/* Lien Principal (ex: SNEAKERS) */}
+          <Link 
+            href={`/category/${cat.id}`}
+            className={`
+              text-sm font-bold tracking-widest uppercase py-2 border-b-2 transition-all flex items-center gap-1
+              ${activeCategory === cat.id ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}
+            `}
+          >
+            {cat.name}
+            <ChevronDown size={14} className={`transition-transform duration-300 ${activeCategory === cat.id ? 'rotate-180' : ''}`} />
+          </Link>
+
+          {/* DROPDOWN SIMPLE (Homme / Femme) */}
+          <div 
+            className={`
+              absolute top-full left-0 w-48 bg-white shadow-xl border border-gray-100 rounded-b-lg overflow-hidden transition-all duration-200 z-50
+              ${activeCategory === cat.id ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}
+            `}
+          >
+             <div className="flex flex-col py-2">
+                <Link 
+                    href={`/category/${cat.id}?gender=Homme`} 
+                    onClick={closeMenu}
+                    className="px-6 py-3 text-sm hover:bg-gray-50 hover:text-black text-gray-600 transition flex justify-between group/link"
+                >
+                    Homme <span className="opacity-0 group-hover/link:opacity-100 transition-opacity">→</span>
+                </Link>
+                <Link 
+                    href={`/category/${cat.id}?gender=Femme`} 
+                    onClick={closeMenu}
+                    className="px-6 py-3 text-sm hover:bg-gray-50 hover:text-black text-gray-600 transition flex justify-between group/link"
+                >
+                    Femme <span className="opacity-0 group-hover/link:opacity-100 transition-opacity">→</span>
+                </Link>
+                <div className="h-px bg-gray-100 my-1 mx-4" />
+                <Link 
+                    href={`/category/${cat.id}`} 
+                    onClick={closeMenu}
+                    className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-black hover:bg-gray-50"
+                >
+                    Tout voir
+                </Link>
+             </div>
+          </div>
+        </div>
       ))}
 
-      {/* 2. Le Bouton "Collections" (S'il reste des catégories) */}
-      {others.length > 0 && (
-        <div className="relative">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className={`flex items-center gap-1 text-xs font-bold uppercase tracking-[0.2em] transition-colors ${isOpen ? 'text-black' : 'text-gray-500 hover:text-black'}`}
+      {/* --- B. LE MENU "COLLECTIONS" (Pour le reste) --- */}
+      {moreCategories.length > 0 && (
+        <div 
+          className="relative h-full flex items-center"
+          onMouseEnter={() => setActiveCategory('collections')}
+        >
+          <button 
+            className={`
+              text-sm font-bold tracking-widest uppercase py-2 border-b-2 transition-all flex items-center gap-1
+              ${activeCategory === 'collections' ? 'border-black text-black' : 'border-transparent text-gray-500 hover:text-black'}
+            `}
           >
             Collections
-            {isOpen ? <X size={14} /> : <ChevronDown size={14} />}
+            <ChevronDown size={14} />
           </button>
 
-          {/* 3. Le Panneau Déroulant (Dropdown) */}
-          {isOpen && (
-            <div className="absolute top-full right-0 mt-4 w-64 bg-white border border-gray-100 shadow-xl rounded-xl overflow-hidden z-50 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
-              <p className="text-xs text-gray-400 font-medium mb-3 uppercase tracking-widest border-b pb-2">
-                Tout voir
-              </p>
-              
-              {/* Une grille pour ranger proprement les catégories */}
-              <div className="grid grid-cols-1 gap-2">
-                {others.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    href={`/category/${cat.id}`}
-                    onClick={() => setIsOpen(false)} // Ferme le menu au clic
-                    className="block px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-black rounded-md transition-colors"
-                  >
-                    {cat.name}
-                  </Link>
+          {/* DROPDOWN DES AUTRES CATÉGORIES */}
+          <div 
+            className={`
+              absolute top-full right-0 w-64 bg-white shadow-xl border border-gray-100 rounded-b-lg overflow-hidden transition-all duration-200 z-50
+              ${activeCategory === 'collections' ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}
+            `}
+          >
+             <ul className="py-2">
+                {moreCategories.map((cat) => (
+                    <li key={cat.id}>
+                        <Link 
+                            href={`/category/${cat.id}`}
+                            onClick={closeMenu}
+                            className="block px-6 py-3 text-sm text-gray-600 hover:text-black hover:bg-gray-50 transition"
+                        >
+                            {cat.name}
+                        </Link>
+                    </li>
                 ))}
-              </div>
-            </div>
-          )}
+             </ul>
+          </div>
         </div>
       )}
+
     </div>
   )
 }

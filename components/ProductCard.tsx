@@ -2,50 +2,76 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Product, Image as ImageType } from '@prisma/client'
+import { Product } from '@prisma/client'
 import { useState, MouseEventHandler } from 'react'
 import { useCart } from '@/hooks/use-cart'
 import { ShoppingBag, Check } from 'lucide-react'
 
-interface ProductCardProps {
-  data: Omit<Product, 'price'> & {
-    price: number; // On force le type number ici
-    images: { url: string }[];
-  }
+// On étend le type pour inclure la couleur dans les images
+interface ProductWithImages extends Omit<Product, 'price'> {
+  price: number
+  images: { url: string; color?: string | null }[]
 }
+
+interface ProductCardProps {
+  data: ProductWithImages
+}
+
+// TA PALETTE DE COULEURS
 const colorMap: Record<string, string> = {
-  'noir': 'black', 'blanc': 'white', 'rouge': 'red', 'bleu': 'blue',
-  'vert': 'green', 'jaune': 'yellow', 'rose': 'pink', 'gris': 'gray',
-  'violet': 'purple', 'orange': 'orange', 'marron': '#8B4513',
-  'beige': '#F5F5DC', 'bordeaux': '#800000', 'marine': '#000080',
-  'kaki': '#F0E68C'
+  'noir mat': '#171717', 'blanc pur': '#FFFFFF', 'gris chiné': '#9CA3AF',
+  'anthracite': '#374151', 'bleu marine': '#1E3A8A', 'bleu roi': '#2563EB',
+  'bleu ciel': '#93C5FD', 'rouge vif': '#EF4444', 'bordeaux': '#7F1D1D',
+  'vert forêt': '#064E3B', 'vert kaki': '#78716C', 'vert menthe': '#6EE7B7',
+  'jaune moutarde': '#D97706', 'beige sable': '#FDE68A', 'marron glacé': '#78350F',
+  'rose poudré': '#FBCFE8', 'violet lavande': '#C4B5FD',
+  'noir': '#000000', 'black': '#000000', 'blanc': '#FFFFFF', 'white': '#FFFFFF',
+  'rouge': '#FF0000', 'red': '#FF0000', 'bleu': '#0000FF', 'blue': '#0000FF',
+  'vert': '#008000', 'jaune': '#FFFF00', 'rose': '#FFC0CB', 'gris': '#808080',
+  'violet': '#800080', 'orange': '#FFA500', 'marron': '#8B4513', 'beige': '#F5F5DC',
+  'marine': '#000080', 'kaki': '#F0E68C', 'or': '#FFD700', 'argent': '#C0C0C0'
 }
 
 export default function ProductCard({ data }: ProductCardProps) {
   const [size, setSize] = useState('')
   const [color, setColor] = useState('')
+  
+  // 1. État pour l'image affichée (par défaut la première)
+  const [currentImage, setCurrentImage] = useState(data.images?.[0]?.url)
+  
   const cart = useCart()
-
   const sizes = data.sizes || []
   const colors = data.colors || []
 
+  // 2. Fonction magique : Trouve l'image associée à la couleur survolée
+  const handleColorHover = (colorName: string) => {
+    const matchedImage = data.images.find(img => img.color === colorName)
+    // Si on trouve une image spécifique à cette couleur, on l'affiche
+    if (matchedImage) {
+      setCurrentImage(matchedImage.url)
+    }
+  }
+
   const getColorStyle = (c: string) => {
     if (c.startsWith('#')) return c;
-    return colorMap[c.toLowerCase()] || c;
+    const lowerC = c.toLowerCase();
+    if (colorMap[lowerC]) return colorMap[lowerC];
+    return c;
   }
 
   const handleAddToCart: MouseEventHandler<HTMLButtonElement> = (e) => {
     e.preventDefault()
     e.stopPropagation()
 
-    if (sizes.length > 0 && !size) return alert("Choisis une taille !")
-    if (colors.length > 0 && !color) return alert("Choisis une couleur !")
+    if (sizes.length > 0 && !size) return alert("⚠️ Veuillez sélectionner une taille.")
+    if (colors.length > 0 && !color) return alert("⚠️ Veuillez sélectionner une couleur.")
 
     cart.addItem({
       id: data.id,
       name: data.name,
       price: Number(data.price),
-      images: data.images.map(img => img.url),
+      // 3. On envoie l'image ACTUELLE (la bonne couleur) au panier
+      images: [currentImage], 
       quantity: 1,
       selectedSize: size,
       selectedColor: color
@@ -53,57 +79,80 @@ export default function ProductCard({ data }: ProductCardProps) {
   }
 
   return (
-    <div className="group relative bg-white border border-transparent hover:border-gray-100 rounded-xl transition-all duration-300">
-      <Link href={`/products/${data.id}`} className="block">
-        <div className="aspect-[3/4] relative overflow-hidden rounded-xl bg-gray-100 mb-4">
-          <Image
-            src={data.images?.[0]?.url || '/placeholder.png'}
-            alt={data.name}
-            fill
-            className="object-cover object-center transition-transform duration-700 group-hover:scale-105"
-          />
-          <button 
-            onClick={handleAddToCart}
-            className="absolute bottom-4 right-4 bg-white p-3 rounded-full shadow-lg translate-y-20 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black hover:text-white z-20 cursor-pointer"
-          >
-            <ShoppingBag size={20} />
-          </button>
-        </div>
-
-        <div className="space-y-1 px-1">
-          <h3 className="font-bold text-sm uppercase truncate">{data.name}</h3>
-          <p className="font-medium text-gray-900">{Number(data.price).toFixed(2)} €</p>
-        </div>
+    <div className="group relative flex flex-col gap-2">
+      
+      {/* IMAGE & LIEN */}
+      <Link href={`/products/${data.id}`} className="block relative overflow-hidden rounded-lg bg-gray-100 aspect-[3/4]">
+        <Image
+          src={currentImage || '/placeholder.png'}
+          alt={data.name}
+          fill
+          // Transition douce lors du changement d'image
+          className="object-cover object-center transition-all duration-500 group-hover:scale-105"
+        />
+        
+        {/* Bouton Panier */}
+        <button 
+          onClick={handleAddToCart}
+          className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-md text-black hover:bg-black hover:text-white transition-all duration-200 z-20 active:scale-95"
+          aria-label="Ajouter au panier"
+        >
+          <ShoppingBag size={18} />
+        </button>
       </Link>
 
-      {(sizes.length > 0 || colors.length > 0) && (
-        <div className="mt-3 px-1 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 h-0 group-hover:h-auto overflow-hidden">
+      {/* INFOS DU PRODUIT */}
+      <div className="space-y-1">
+        <div className="flex justify-between items-start gap-2">
+           <Link href={`/products/${data.id}`} className="font-semibold text-sm uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
+             {data.name}
+           </Link>
+           <p className="font-bold text-sm whitespace-nowrap">
+             {Number(data.price).toFixed(2)} €
+           </p>
+        </div>
+
+        {/* SÉLECTEURS */}
+        <div className="flex flex-col gap-2 pt-1">
+            
+            {/* Couleurs (Avec logique de survol) */}
             {colors.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
                 {colors.map((c) => {
                    const bg = getColorStyle(c);
+                   const isLight = bg === '#FFFFFF' || bg === '#FDE68A' || bg === '#FBCFE8' || bg === '#93C5FD' || bg === '#6EE7B7';
+                   
                    return (
                     <button
                         key={c}
-                        onClick={(e) => { e.preventDefault(); setColor(c) }}
-                        className={`w-4 h-4 rounded-full border shadow-sm transition-all cursor-pointer flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-105 border-gray-300'}`}
+                        // AU SURVOL : On change l'image
+                        onMouseEnter={() => handleColorHover(c)}
+                        // AU CLIC : On sélectionne la couleur ET on fixe l'image
+                        onClick={(e) => { 
+                            e.preventDefault(); 
+                            setColor(c);
+                            handleColorHover(c); 
+                        }}
+                        className={`w-5 h-5 rounded-full border border-gray-200 shadow-sm transition-transform cursor-pointer flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
                         style={{ backgroundColor: bg }} 
                         title={c}
+                        aria-label={`Couleur ${c}`}
                     >
-                        {color === c && <Check size={8} className={bg === 'white' ? 'text-black' : 'text-white'} />}
+                        {color === c && <Check size={10} className={isLight ? 'text-black' : 'text-white'} />}
                     </button>
                    )
                 })}
             </div>
             )}
             
+            {/* Tailles (Pas de changement, toujours fonctionnel) */}
             {sizes.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
                 {sizes.map((s) => (
                 <button
                     key={s}
                     onClick={(e) => { e.preventDefault(); setSize(s) }}
-                    className={`text-[9px] px-1.5 py-0.5 border rounded transition-colors uppercase font-bold ${size === s ? 'bg-black text-white border-black' : 'bg-white text-gray-500 hover:border-black'}`}
+                    className={`text-xs min-w-[24px] h-6 px-1 border rounded flex items-center justify-center transition-colors uppercase font-medium ${size === s ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
                 >
                     {s}
                 </button>
@@ -111,7 +160,7 @@ export default function ProductCard({ data }: ProductCardProps) {
             </div>
             )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
