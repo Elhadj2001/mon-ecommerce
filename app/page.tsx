@@ -1,99 +1,120 @@
 import { prisma } from '@/lib/prisma'
-import ProductCard from '@/components/ProductCard' // Assure-toi que le fichier est bien là
+import ProductCard from '@/components/ProductCard'
 import Link from 'next/link'
+import Image from 'next/image' // On importe Image pour optimiser si possible
 
+// On désactive le cache pour voir les modifications instantanément
 export const revalidate = 0 
 
 export default async function Home() {
-  // 1. On récupère les catégories AVEC leurs produits ET images
+  // 1. Récupération des catégories non vides avec leurs produits et images
   const categories = await prisma.category.findMany({
     include: {
       products: {
-        take: 4, 
+        take: 4, // On affiche les 4 derniers produits par catégorie
         orderBy: { createdAt: 'desc' },
         include: {
-           images: true // <--- OBLIGATOIRE pour avoir l'image
+          images: true // INDISPENSABLE pour que la ProductCard affiche la photo
         }
       }
     },
     orderBy: { name: 'asc' }
   })
 
-  // On filtre pour ne garder que les catégories non vides
+  // 2. Filtrage : on ne garde que les catégories qui ont des produits
   const activeCategories = categories.filter(cat => cat.products.length > 0)
 
   return (
     <main className="min-h-screen bg-white">
       
-      {/* SECTION HERO */}
-      <div className="relative overflow-hidden bg-gray-50">
-        <div className="pb-80 pt-16 sm:pb-40 sm:pt-24 lg:pb-48 lg:pt-40">
-          <div className="relative mx-auto max-w-7xl px-4 sm:static sm:px-6 lg:px-8">
-            <div className="sm:max-w-lg">
-              <h1 className="font text-4xl font-black tracking-tighter text-gray-900 sm:text-6xl uppercase">
+      {/* --- SECTION HERO (Bannière) --- */}
+      <div className="relative bg-gray-50">
+        <div className="mx-auto max-w-7xl lg:grid lg:grid-cols-12 lg:gap-x-8 lg:px-8">
+          
+          {/* Texte Hero */}
+          <div className="px-6 pb-24 pt-10 sm:pb-32 lg:col-span-7 lg:px-0 lg:pb-56 lg:pt-48 xl:col-span-6">
+            <div className="mx-auto max-w-2xl lg:mx-0">
+              <h1 className="text-4xl font-black tracking-tighter text-gray-900 sm:text-6xl uppercase">
                 Nouvelle Collection
               </h1>
-              <p className="mt-4 text-xl text-gray-500 font-light">
-                Elégance sans compromis. Découvrez nos pièces uniques conçues pour durer.
+              <p className="mt-6 text-lg leading-8 text-gray-600 font-light">
+                Une élégance sans compromis. Découvrez nos pièces uniques conçues pour durer et sublimer votre quotidien.
               </p>
-              <div className="mt-10">
-                <a href="#collection" className="inline-block rounded-none bg-black px-8 py-3 text-center font-bold text-white uppercase tracking-widest hover:bg-gray-800 transition">
+              <div className="mt-10 flex items-center gap-x-6">
+                <a
+                  href="#collection"
+                  className="rounded-none bg-black px-8 py-3 text-sm font-bold text-white shadow-sm hover:bg-gray-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black uppercase tracking-widest transition-all"
+                >
                   Voir la boutique
                 </a>
               </div>
             </div>
-            
-            <div className="mt-10 mb-10 md:absolute md:right-0 md:top-0 md:mt-20 md:w-1/2 lg:mt-0">
-               {/* eslint-disable-next-line @next/next/no-img-element */}
-               <img 
-                 src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80" 
-                 alt="Hero" 
-                 className="rounded-none shadow-none object-cover h-64 w-full md:h-96 grayscale hover:grayscale-0 transition duration-700"
-               />
-            </div>
+          </div>
+
+          {/* Image Hero */}
+          <div className="relative lg:col-span-5 lg:-mr-8 xl:absolute xl:inset-0 xl:left-1/2 xl:mr-0">
+            {/* J'utilise une simple balise img ici pour éviter les soucis de config Next/Image pour l'instant */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="aspect-[3/2] w-full bg-gray-50 object-cover lg:absolute lg:inset-0 lg:aspect-auto lg:h-full"
+              src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80"
+              alt="Nouvelle Collection Fashion"
+            />
           </div>
         </div>
       </div>
 
-      {/* SECTION PAR CATÉGORIE */}
-      <div id="collection" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-20">
+      {/* --- SECTION PRODUITS PAR CATÉGORIE --- */}
+      <div id="collection" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-24">
         
         {activeCategories.map((category) => (
           <section key={category.id}>
+            
+            {/* En-tête de catégorie */}
             <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
               <h2 className="text-2xl font-black tracking-tighter text-gray-900 uppercase">
                 {category.name}
               </h2>
               <Link 
                 href={`/category/${category.id}`} 
-                className="text-sm font-bold text-gray-500 hover:text-black uppercase tracking-widest transition-colors"
+                className="hidden sm:block text-xs font-bold text-gray-500 hover:text-black uppercase tracking-widest transition-colors"
               >
                 Voir tout →
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
+            {/* --- LA GRILLE MAGIQUE (Mobile: 2 colonnes / PC: 4 colonnes) --- */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-10 sm:gap-x-8">
               {category.products.map((product) => (
-                // Dans app/page.tsx
-
-              <ProductCard 
-                key={product.id} 
-                data={{
-                  ...product, // <--- C'EST LA CLÉ ! Cela passe description, stock, etc.
-                  price: product.price.toNumber(), // On écrase juste le prix pour le convertir
-                  // Pas besoin de redéfinir sizes/colors/images ici car ...product les contient déjà
-                  // sauf si tu veux forcer des valeurs par défaut
-                }} 
-              />
+                <ProductCard 
+                  key={product.id} 
+                  data={{
+                    ...product,
+                    // Conversion du Decimal Prisma en Number pour le JS
+                    price: product.price.toNumber() 
+                  }} 
+                />
               ))}
             </div>
+
+            {/* Bouton "Voir tout" pour mobile (en bas de liste) */}
+            <div className="mt-8 sm:hidden text-center">
+                 <Link 
+                href={`/category/${category.id}`} 
+                className="text-xs font-bold text-gray-500 hover:text-black uppercase tracking-widest border-b border-gray-300 pb-1"
+              >
+                Voir toute la collection {category.name}
+              </Link>
+            </div>
+
           </section>
         ))}
 
+        {/* Message si vide */}
         {activeCategories.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-gray-500 text-lg">Aucun produit en ligne pour le moment.</p>
-            <p className="text-sm text-gray-400 mt-2">Connectez-vous à admin pour ajouter vos collections.</p>
+          <div className="text-center py-32 bg-gray-50 rounded-xl">
+            <p className="text-gray-500 text-lg font-medium">La boutique est en cours de préparation.</p>
+            <p className="text-sm text-gray-400 mt-2">Revenez très vite !</p>
           </div>
         )}
 
