@@ -9,7 +9,7 @@ import { toast } from "react-hot-toast"
 import { useRouter, useParams } from "next/navigation"
 import { Product, Image as ImageType, Category } from "@prisma/client"
 import ImageUpload from "@/components/admin/ImageUpload"
-import { Trash, Plus, RotateCcw, Check, Palette, X } from "lucide-react"
+import { Trash, Plus, RotateCcw, Check, Palette, X, User } from "lucide-react"
 
 // --- SCHÉMA ZOD ---
 const formSchema = z.object({
@@ -19,8 +19,9 @@ const formSchema = z.object({
   categoryId: z.string().min(1, "Catégorie requise"),
   description: z.string().min(1, "Description requise"),
   
-  // --- CORRECTION MAJEURE ICI ---
-  // On autorise la propriété 'color' (qui peut être null ou string)
+  // NOUVEAU : Gestion du Genre
+  gender: z.enum(["Homme", "Femme", "Unisex", "Enfant"]).default("Unisex"),
+
   images: z.object({ 
     url: z.string(), 
     color: z.string().optional().nullable() 
@@ -39,10 +40,12 @@ interface ProductFormProps {
   categories: Category[]
 }
 
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "36", "38", "40", "42", "44"]
+const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "36", "38", "40", "42", "44", "Unique"]
 
-// --- PALETTE RICHE ---
+// --- PALETTE COMPLÈTE & SYNCHRONISÉE ---
+// Cette liste correspond exactement à ton ProductClient pour éviter les bugs
 const RICH_COLORS = [
+  // Couleurs Riches
   { name: 'Noir Mat', hex: '#171717' },
   { name: 'Blanc Pur', hex: '#FFFFFF' },
   { name: 'Gris Chiné', hex: '#9CA3AF' },
@@ -60,6 +63,10 @@ const RICH_COLORS = [
   { name: 'Marron Glacé', hex: '#78350F' },
   { name: 'Rose Poudré', hex: '#FBCFE8' },
   { name: 'Violet Lavande', hex: '#C4B5FD' },
+  // Basiques
+  { name: 'Or', hex: '#FFD700' },
+  { name: 'Argent', hex: '#C0C0C0' },
+  { name: 'Orange', hex: '#FFA500' },
 ]
 
 export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categories }) => {
@@ -80,8 +87,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
       price: parseFloat(String(initialData.price)),
       sizes: initialData.sizes || [],
       colors: initialData.colors || [],
+      gender: (initialData.gender as any) || "Unisex", // Sécurité si null
     } : {
-      name: '', images: [], price: 0, stock: 0, categoryId: '', description: '', sizes: [], colors: [], isFeatured: false, isArchived: false,
+      name: '', images: [], price: 0, stock: 0, categoryId: '', description: '', 
+      sizes: [], colors: [], isFeatured: false, isArchived: false, gender: "Unisex"
     }
   })
 
@@ -128,7 +137,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
       <div className="flex items-center justify-between border-b border-gray-100 pb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-          <p className="text-sm text-gray-500 mt-1">Remplissez les détails ci-dessous</p>
+          <p className="text-sm text-gray-500 mt-1">Gérez les informations de votre catalogue</p>
         </div>
         {initialData && (
           <button
@@ -150,16 +159,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
         <div className="bg-gray-50 p-6 rounded-lg border border-dashed border-gray-300">
           <label className="text-lg font-semibold block mb-4">Galerie d&apos;images</label>
           <ImageUpload 
-            // On s'assure de passer l'objet complet { url, color }
             value={form.watch("images").map((image) => ({ url: image.url, color: image.color }))}
             disabled={loading}
             onChange={(newImages) => {
-                // On met à jour le formulaire en gardant la structure { url, color }
                 form.setValue("images", newImages, { shouldValidate: true })
             }}
             onRemove={(url) => form.setValue("images", form.getValues("images").filter((current) => current.url !== url))}
-            
-            // On passe les couleurs sélectionnées (ex: ["Noir Mat", "Rouge Vif"])
             availableColors={form.watch('colors')}
           />
           {form.formState.errors.images && <p className="text-red-500 text-sm mt-2 font-medium">⚠️ {form.formState.errors.images.message}</p>}
@@ -213,25 +218,50 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
             {form.formState.errors.categoryId && <p className="text-red-500 text-sm mt-1">⚠️ Catégorie requise</p>}
           </div>
 
+          {/* NOUVEAU CHAMP GENRE */}
           <div className="space-y-2">
-            <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Prix (€)</label>
-            <div className="relative">
-                <input 
-                    type="number" step="0.01"
-                    className="w-full border border-gray-300 p-3 rounded-lg pl-8 focus:ring-2 focus:ring-black outline-none transition"
-                    disabled={loading} {...form.register("price")} 
-                />
-                <span className="absolute left-3 top-3 text-gray-400">€</span>
+            <label className="text-sm font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
+              <User size={16} /> Genre / Cible
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {['Unisex', 'Homme', 'Femme', 'Enfant'].map((g) => (
+                <div 
+                  key={g}
+                  onClick={() => form.setValue('gender', g as any)}
+                  className={`
+                    cursor-pointer text-center py-3 rounded-lg border text-sm font-medium transition-all
+                    ${form.watch('gender') === g 
+                      ? 'bg-black text-white border-black' 
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}
+                  `}
+                >
+                  {g}
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Stock</label>
-            <input 
-                type="number" 
-                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-black outline-none transition"
-                disabled={loading} {...form.register("stock")} 
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Prix (€)</label>
+                <div className="relative">
+                    <input 
+                        type="number" step="0.01"
+                        className="w-full border border-gray-300 p-3 rounded-lg pl-8 focus:ring-2 focus:ring-black outline-none transition"
+                        disabled={loading} {...form.register("price")} 
+                    />
+                    <span className="absolute left-3 top-3 text-gray-400">€</span>
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Stock</label>
+                <input 
+                    type="number" 
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-black outline-none transition"
+                    disabled={loading} {...form.register("stock")} 
+                />
+            </div>
           </div>
         </div>
 
@@ -259,7 +289,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                                 key={size}
                                 onClick={() => toggleSelection("sizes", size)}
                                 className={`
-                                    w-12 h-12 flex items-center justify-center rounded-md cursor-pointer border transition-all font-semibold select-none
+                                    w-10 h-10 flex items-center justify-center rounded-md cursor-pointer border transition-all font-semibold select-none text-sm
                                     ${isSelected 
                                         ? 'bg-black text-white border-black shadow-md scale-110' 
                                         : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-50'}
@@ -273,15 +303,15 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                 {form.formState.errors.sizes && <p className="text-red-500 text-sm mt-2">⚠️ Sélectionnez au moins une taille</p>}
             </div>
 
-            {/* COULEURS */}
+            {/* COULEURS (AVEC SCROLL) */}
             <div>
                 <label className="text-sm font-bold uppercase tracking-wider text-gray-700 block mb-3 flex items-center gap-2">
                   <Palette size={16} /> Couleurs
                 </label>
                 
                 <div className="space-y-4">
-                  {/* Palette prédéfinie */}
-                  <div className="flex flex-wrap gap-3">
+                  {/* ZONE SCROLLABLE POUR NE PAS SATURE L'ÉCRAN */}
+                  <div className="flex flex-wrap gap-3 max-h-60 overflow-y-auto p-2 border border-gray-100 rounded-lg shadow-inner bg-gray-50/50">
                       {RICH_COLORS.map((colorItem) => {
                           const isSelected = selectedColors?.includes(colorItem.name)
                           const isWhite = colorItem.hex.toLowerCase() === '#ffffff'
@@ -291,19 +321,16 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                                   onClick={() => toggleSelection("colors", colorItem.name)}
                                   title={colorItem.name}
                                   className={`
-                                      w-10 h-10 rounded-full cursor-pointer border-2 transition-all shadow-sm flex items-center justify-center relative group
-                                      ${isSelected 
-                                          ? `ring-2 ring-offset-2 scale-110 ${isWhite ? 'ring-gray-300 border-gray-300' : 'ring-black border-transparent'}` 
-                                          : `hover:scale-105 ${isWhite ? 'border-gray-200' : 'border-transparent'}`}
+                                    w-8 h-8 rounded-full cursor-pointer border-2 transition-all shadow-sm flex items-center justify-center relative group flex-shrink-0
+                                    ${isSelected 
+                                      ? `ring-2 ring-offset-2 scale-110 ${isWhite ? 'ring-gray-300 border-gray-300' : 'ring-black border-transparent'}` 
+                                      : `hover:scale-105 ${isWhite ? 'border-gray-200' : 'border-transparent'}`}
                                   `}
                                   style={{ backgroundColor: colorItem.hex }}
                               >
                                   {isSelected && (
-                                    <Check size={16} className={isWhite ? "text-black" : "text-white"} />
+                                    <Check size={14} className={isWhite ? "text-black" : "text-white"} />
                                   )}
-                                  <span className="absolute bottom-full mb-2 hidden group-hover:block bg-black text-white text-xs p-1 rounded whitespace-nowrap z-10">
-                                    {colorItem.name}
-                                  </span>
                               </div>
                           )
                       })}
@@ -311,21 +338,21 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
 
                   {/* Sélecteur personnalisé */}
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                     <input 
-                       type="color" 
-                       value={customColorHex}
-                       onChange={(e) => setCustomColorHex(e.target.value)}
-                       className="w-10 h-10 rounded cursor-pointer border-none p-0"
-                       title="Choisir une couleur personnalisée"
-                     />
-                     <span className="text-sm font-mono text-gray-600">{customColorHex}</span>
-                     <button
-                       type="button"
-                       onClick={addCustomColor}
-                       className="ml-auto text-sm bg-white border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-100 transition flex items-center gap-1"
-                     >
-                       <Plus size={14} /> Ajouter ce HEX
-                     </button>
+                      <input 
+                        type="color" 
+                        value={customColorHex}
+                        onChange={(e) => setCustomColorHex(e.target.value)}
+                        className="w-10 h-10 rounded cursor-pointer border-none p-0"
+                        title="Choisir une couleur personnalisée"
+                      />
+                      <span className="text-sm font-mono text-gray-600">{customColorHex}</span>
+                      <button
+                        type="button"
+                        onClick={addCustomColor}
+                        className="ml-auto text-sm bg-white border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-100 transition flex items-center gap-1"
+                      >
+                        <Plus size={14} /> Ajouter
+                      </button>
                   </div>
 
                   {/* Liste des couleurs personnalisées ajoutées */}
@@ -351,22 +378,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
         {/* SECTION VISIBILITÉ */}
         <div className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
           <label className="flex items-center gap-3 cursor-pointer group">
-            <div className="relative flex items-center">
-                <input type="checkbox" {...form.register("isFeatured")} className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 transition-all checked:border-black checked:bg-black checked:before:bg-black hover:before:opacity-10" />
-                <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                </span>
-            </div>
+            <input type="checkbox" {...form.register("isFeatured")} className="w-5 h-5 accent-black cursor-pointer" />
             <span className="text-sm font-medium text-gray-700 group-hover:text-black">Mettre en avant (Accueil)</span>
           </label>
 
           <label className="flex items-center gap-3 cursor-pointer group ml-6">
-            <div className="relative flex items-center">
-                <input type="checkbox" {...form.register("isArchived")} className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 transition-all checked:border-red-500 checked:bg-red-500 hover:before:opacity-10" />
-                 <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                </span>
-            </div>
+            <input type="checkbox" {...form.register("isArchived")} className="w-5 h-5 accent-red-500 cursor-pointer" />
             <span className="text-sm font-medium text-gray-700 group-hover:text-red-600">Archiver (Cacher du site)</span>
           </label>
         </div>

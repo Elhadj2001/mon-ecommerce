@@ -5,7 +5,17 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const { 
-      name, price, stock, categoryId, images, sizes, colors, description, isFeatured, isArchived 
+      name, 
+      price, 
+      stock, 
+      categoryId, 
+      images, 
+      sizes, 
+      colors, 
+      description, 
+      isFeatured, 
+      isArchived,
+      gender // <--- RÉCUPÉRATION DU CHAMP GENRE
     } = body
 
     // 1. Validation stricte
@@ -16,11 +26,10 @@ export async function POST(req: Request) {
     // 2. Gestion intelligente de la catégorie
     let finalCategoryId = categoryId
 
-    // On vérifie si categoryId est un UUID (ID technique) ou un simple nom
+    // On vérifie si categoryId est un UUID
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)
 
     if (!isUUID) {
-      // Si ce n'est pas un ID, on cherche par NOM
       const existingCategory = await prisma.category.findFirst({
         where: { name: { equals: categoryId, mode: 'insensitive' } }
       })
@@ -28,7 +37,6 @@ export async function POST(req: Request) {
       if (existingCategory) {
         finalCategoryId = existingCategory.id
       } else {
-        // Sinon on la crée proprement avant le produit
         const newCategory = await prisma.category.create({
           data: { name: categoryId }
         })
@@ -36,7 +44,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Création du produit avec l'ID maintenant GARANTI
+    // 3. Création du produit
     const product = await prisma.product.create({
       data: {
         name,
@@ -47,7 +55,10 @@ export async function POST(req: Request) {
         isArchived: !!isArchived,
         sizes,
         colors,
-        categoryId: finalCategoryId, // L'ID qui existe forcément
+        // ENREGISTREMENT DU GENRE
+        // Si non défini, on met 'Unisex' par défaut pour éviter les bugs
+        gender: gender || "Unisex", 
+        categoryId: finalCategoryId,
         images: {
           createMany: {
             data: images.map((image: { url: string; color?: string }) => ({

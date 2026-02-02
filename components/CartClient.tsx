@@ -3,46 +3,46 @@
 import { useCart } from '@/hooks/use-cart'
 import Image from 'next/image'
 import Link from 'next/link'
-import { Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import { Trash2, ShoppingBag, ArrowRight, Minus, Plus } from 'lucide-react'
 import axios from 'axios'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-// --- 1. MÊME DICTIONNAIRE QUE PRODUCT CLIENT (COPIE EXACTE) ---
+// --- DICTIONNAIRE DE COULEURS ---
 const colorMap: Record<string, string> = {
-  'noir': '#000000', 'black': '#000000',
-  'blanc': '#FFFFFF', 'white': '#FFFFFF', 'blanc pur': '#FFFFFF',
-  'rouge': '#FF0000', 'red': '#FF0000',
-  'rose poudré': '#FFD1DC',
-  'jaune moutarde': '#E1AD01',
-  'bleu': '#0000FF', 'blue': '#0000FF',
-  'vert': '#008000', 'green': '#008000',
-  'jaune': '#FFFF00', 'yellow': '#FFFF00',
-  'rose': '#FFC0CB', 'pink': '#FFC0CB',
-  'gris': '#808080', 'grey': '#808080',
-  'violet': '#800080', 'purple': '#800080',
-  'orange': '#FFA500',
-  'marron': '#8B4513', 'brown': '#8B4513',
-  'beige': '#F5F5DC',
-  'bordeaux': '#800000',
-  'marine': '#000080', 'navy': '#000080',
-  'kaki': '#F0E68C',
-  'or': '#FFD700', 'gold': '#FFD700',
-  'argent': '#C0C0C0', 'silver': '#C0C0C0'
+  'noir mat': '#171717', 'blanc pur': '#FFFFFF', 'gris chiné': '#9CA3AF',
+  'anthracite': '#374151', 'bleu marine': '#1E3A8A', 'bleu roi': '#2563EB',
+  'bleu ciel': '#93C5FD', 'rouge vif': '#EF4444', 'bordeaux': '#7F1D1D',
+  'vert forêt': '#064E3B', 'vert kaki': '#78716C', 'vert menthe': '#6EE7B7',
+  'jaune moutarde': '#D97706', 'beige sable': '#FDE68A', 'marron glacé': '#78350F',
+  'rose poudré': '#FBCFE8', 'violet lavande': '#C4B5FD',
+  'noir': '#000000', 'black': '#000000', 'blanc': '#FFFFFF', 'white': '#FFFFFF',
+  'rouge': '#FF0000', 'red': '#FF0000', 'bleu': '#0000FF', 'blue': '#0000FF',
+  'vert': '#008000', 'green': '#008000', 'jaune': '#FFFF00', 'yellow': '#FFFF00',
+  'rose': '#FFC0CB', 'pink': '#FFC0CB', 'gris': '#808080', 'grey': '#808080',
+  'violet': '#800080', 'purple': '#800080', 'orange': '#FFA500',
+  'marron': '#8B4513', 'brown': '#8B4513', 'beige': '#F5F5DC',
+  'marine': '#000080', 'navy': '#000080', 'kaki': '#F0E68C',
+  'or': '#FFD700', 'gold': '#FFD700', 'argent': '#C0C0C0', 'silver': '#C0C0C0'
 }
 
 export default function CartClient() {
   const cart = useCart()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   const items = cart.items
 
-  // Calcul du total
-  const totalPrice = items.reduce((total, item) => {
+  // Calcul du total global
+  const grandTotal = items.reduce((total, item) => {
     return total + Number(item.price) * item.quantity
   }, 0)
 
-  // Fonction de paiement Stripe
   const onCheckout = async () => {
     try {
       setLoading(true)
@@ -63,15 +63,39 @@ export default function CartClient() {
     }
   }
 
-  // Fonction pour récupérer la couleur (identique à ProductClient)
   const getColorStyle = (c: string) => {
     if (!c) return 'transparent';
     if (c.startsWith('#')) return c;
-    if (colorMap[c.toLowerCase()]) return colorMap[c.toLowerCase()];
+    const lowerC = c.toLowerCase();
+    if (colorMap[lowerC]) return colorMap[lowerC];
     return c;
   }
 
-  // --- SI LE PANIER EST VIDE ---
+  // --- FONCTIONS DE MODIFICATION (Corrigées) ---
+  
+  const onIncrease = (cartId: string) => {
+    // On trouve l'item grâce à son ID unique de panier
+    const item = items.find(i => i.cartId === cartId);
+    if (item) {
+        // On utilise la fonction updateQuantity qui existe dans ton store
+        cart.updateQuantity(cartId, item.quantity + 1)
+    }
+  }
+
+  const onDecrease = (cartId: string) => {
+    const item = items.find(i => i.cartId === cartId);
+    if (item) {
+        // Ton store gère déjà la suppression si qté <= 0, donc c'est parfait
+        cart.updateQuantity(cartId, item.quantity - 1)
+    }
+  }
+
+  const onRemove = (cartId: string) => {
+    cart.removeItem(cartId)
+  }
+
+  if (!isMounted) return null;
+
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 px-4 text-center">
@@ -79,9 +103,6 @@ export default function CartClient() {
             <ShoppingBag size={48} className="text-gray-400" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">Votre panier est vide</h2>
-        <p className="text-gray-500 max-w-sm">
-            Il semblerait que vous n'ayez pas encore craqué pour nos dernières pièces.
-        </p>
         <button 
             onClick={() => router.push('/')} 
             className="mt-4 bg-black text-white px-8 py-3 rounded-md font-medium uppercase hover:bg-gray-800 transition-all flex items-center gap-2"
@@ -92,7 +113,6 @@ export default function CartClient() {
     )
   }
 
-  // --- AFFICHAGE DU PANIER ---
   return (
     <div className="bg-white px-4 py-16 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold tracking-tight text-gray-900 uppercase mb-10">Mon Panier ({items.length})</h1>
@@ -103,12 +123,12 @@ export default function CartClient() {
         <div className="lg:col-span-7">
           <ul className="divide-y divide-gray-200 border-t border-b border-gray-200">
             {items.map((item) => {
-               // Clé unique pour React
-               const uniqueKey = `${item.id}-${item.selectedColor}-${item.selectedSize}`;
+               // item.cartId est unique, parfait pour la key
                const bg = getColorStyle(item.selectedColor || '');
+               const lineTotal = Number(item.price) * item.quantity; // Calcul du total de la ligne
 
                return (
-                <li key={uniqueKey} className="flex py-6 sm:py-10">
+                <li key={item.cartId} className="flex py-6 sm:py-10">
                     {/* IMAGE */}
                     <div className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100">
                         <Image
@@ -123,14 +143,11 @@ export default function CartClient() {
                     <div className="ml-4 flex flex-1 flex-col justify-between sm:ml-6">
                         <div className="relative pr-9 sm:grid sm:grid-cols-2 sm:gap-x-6 sm:pr-0">
                             <div>
-                                <div className="flex justify-between">
-                                    <h3 className="text-sm font-semibold text-gray-900 uppercase">
-                                        <Link href={`/products/${item.id}`}>{item.name}</Link>
-                                    </h3>
-                                </div>
+                                <h3 className="text-sm font-semibold text-gray-900 uppercase">
+                                    <Link href={`/products/${item.id}`}>{item.name}</Link>
+                                </h3>
                                 
                                 <div className="mt-2 flex text-sm text-gray-500 gap-4 items-center">
-                                    {/* Pastille Couleur */}
                                     {item.selectedColor && (
                                         <div className="flex items-center gap-2 border-r border-gray-200 pr-4">
                                             <div 
@@ -141,8 +158,6 @@ export default function CartClient() {
                                             <span className="capitalize text-gray-600">{item.selectedColor}</span>
                                         </div>
                                     )}
-                                    
-                                    {/* Taille */}
                                     {item.selectedSize && (
                                         <p className="font-medium text-gray-900 border border-gray-200 px-2 py-0.5 rounded text-xs">
                                             {item.selectedSize}
@@ -150,21 +165,50 @@ export default function CartClient() {
                                     )}
                                 </div>
                                 
-                                <p className="mt-3 text-sm font-bold text-gray-900">
-                                    {Number(item.price).toFixed(2)} €
+                                {/* PRIX UNITAIRE */}
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Prix unitaire : {Number(item.price).toFixed(2)} €
                                 </p>
                             </div>
 
-                            {/* Bouton Supprimer */}
-                            <div className="mt-4 sm:mt-0 sm:pr-9">
+                            {/* QUANTITÉ + TOTAL LIGNE + SUPPRESSION */}
+                            <div className="mt-4 sm:mt-0 sm:pr-9 flex flex-col items-end gap-2">
+                                {/* Contrôle Quantité */}
+                                <div className="flex items-center border border-gray-300 rounded-md">
+                                    <button 
+                                        // On utilise cartId ici !
+                                        onClick={() => onDecrease(item.cartId)}
+                                        className="p-2 hover:bg-gray-100 text-gray-600 transition"
+                                    >
+                                        <Minus size={14} />
+                                    </button>
+                                    <span className="px-2 text-sm font-semibold min-w-[30px] text-center">
+                                        {item.quantity}
+                                    </span>
+                                    <button 
+                                        // On utilise cartId ici !
+                                        onClick={() => onIncrease(item.cartId)}
+                                        className="p-2 hover:bg-gray-100 text-gray-600 transition"
+                                    >
+                                        <Plus size={14} />
+                                    </button>
+                                </div>
+
+                                {/* TOTAL LIGNE (Nouveau) */}
+                                <p className="text-sm font-bold text-black">
+                                    Total: {lineTotal.toFixed(2)} €
+                                </p>
+                                
+                                {/* Bouton Supprimer */}
                                 <button
-                                    onClick={() => cart.removeItem(item.id)}
+                                    onClick={() => onRemove(item.cartId)}
                                     className="absolute right-0 top-0 text-gray-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-full"
                                     title="Supprimer"
                                 >
                                     <Trash2 size={20} />
                                 </button>
                             </div>
+
                         </div>
                     </div>
                 </li>
@@ -173,14 +217,14 @@ export default function CartClient() {
           </ul>
         </div>
 
-        {/* RÉSUMÉ COMMANDE (Style identique au bouton ProductClient) */}
-        <div className="mt-16 rounded-lg bg-gray-50 px-4 py-6 sm:p-6 lg:col-span-5 lg:mt-0 lg:p-8">
+        {/* RÉSUMÉ COMMANDE (TOTAL FINAL) */}
+        <div className="mt-16 rounded-lg bg-gray-50 px-4 py-6 sm:p-6 lg:col-span-5 lg:mt-0 lg:p-8 sticky top-24">
           <h2 className="text-lg font-medium text-gray-900 uppercase tracking-tight">Résumé de la commande</h2>
           
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-              <div className="text-base font-medium text-gray-900">Sous-total</div>
-              <div className="text-base font-bold text-gray-900">{totalPrice.toFixed(2)} €</div>
+              <div className="text-base font-medium text-gray-900">Total Global</div>
+              <div className="text-xl font-black text-gray-900">{grandTotal.toFixed(2)} €</div>
             </div>
             
             <div className="flex items-center justify-between pt-2">
@@ -189,7 +233,6 @@ export default function CartClient() {
             </div>
           </div>
 
-          {/* Bouton style ProductClient */}
           <button
             onClick={onCheckout}
             disabled={loading}

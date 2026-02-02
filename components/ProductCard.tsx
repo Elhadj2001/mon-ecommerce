@@ -7,52 +7,53 @@ import { useState, MouseEventHandler } from 'react'
 import { useCart } from '@/hooks/use-cart'
 import { ShoppingBag, Check } from 'lucide-react'
 
-interface ProductCardProps {
-  data: Omit<Product, 'price'> & {
-    price: number; 
-    images: { url: string }[];
-  }
+// On étend le type pour inclure la couleur dans les images
+interface ProductWithImages extends Omit<Product, 'price'> {
+  price: number
+  images: { url: string; color?: string | null }[]
 }
 
-// TA NOUVELLE PALETTE (Convertie pour le mapping)
-const colorMap: Record<string, string> = {
-  // --- Tes Rich Colors ---
-  'noir mat': '#171717',
-  'blanc pur': '#FFFFFF',
-  'gris chiné': '#9CA3AF',
-  'anthracite': '#374151',
-  'bleu marine': '#1E3A8A',
-  'bleu roi': '#2563EB',
-  'bleu ciel': '#93C5FD',
-  'rouge vif': '#EF4444',
-  'bordeaux': '#7F1D1D',
-  'vert forêt': '#064E3B',
-  'vert kaki': '#78716C',
-  'vert menthe': '#6EE7B7',
-  'jaune moutarde': '#D97706',
-  'beige sable': '#FDE68A',
-  'marron glacé': '#78350F',
-  'rose poudré': '#FBCFE8',
-  'violet lavande': '#C4B5FD',
+interface ProductCardProps {
+  data: ProductWithImages
+}
 
-  // --- Fallbacks classiques (Au cas où) ---
-  'noir': '#000000', 'black': '#000000',
-  'blanc': '#FFFFFF', 'white': '#FFFFFF',
-  'rouge': '#FF0000', 'red': '#FF0000',
-  'bleu': '#0000FF', 'blue': '#0000FF'
+// TA PALETTE DE COULEURS
+const colorMap: Record<string, string> = {
+  'noir mat': '#171717', 'blanc pur': '#FFFFFF', 'gris chiné': '#9CA3AF',
+  'anthracite': '#374151', 'bleu marine': '#1E3A8A', 'bleu roi': '#2563EB',
+  'bleu ciel': '#93C5FD', 'rouge vif': '#EF4444', 'bordeaux': '#7F1D1D',
+  'vert forêt': '#064E3B', 'vert kaki': '#78716C', 'vert menthe': '#6EE7B7',
+  'jaune moutarde': '#D97706', 'beige sable': '#FDE68A', 'marron glacé': '#78350F',
+  'rose poudré': '#FBCFE8', 'violet lavande': '#C4B5FD',
+  'noir': '#000000', 'black': '#000000', 'blanc': '#FFFFFF', 'white': '#FFFFFF',
+  'rouge': '#FF0000', 'red': '#FF0000', 'bleu': '#0000FF', 'blue': '#0000FF',
+  'vert': '#008000', 'jaune': '#FFFF00', 'rose': '#FFC0CB', 'gris': '#808080',
+  'violet': '#800080', 'orange': '#FFA500', 'marron': '#8B4513', 'beige': '#F5F5DC',
+  'marine': '#000080', 'kaki': '#F0E68C', 'or': '#FFD700', 'argent': '#C0C0C0'
 }
 
 export default function ProductCard({ data }: ProductCardProps) {
   const [size, setSize] = useState('')
   const [color, setColor] = useState('')
+  
+  // 1. État pour l'image affichée (par défaut la première)
+  const [currentImage, setCurrentImage] = useState(data.images?.[0]?.url)
+  
   const cart = useCart()
-
   const sizes = data.sizes || []
   const colors = data.colors || []
 
+  // 2. Fonction magique : Trouve l'image associée à la couleur survolée
+  const handleColorHover = (colorName: string) => {
+    const matchedImage = data.images.find(img => img.color === colorName)
+    // Si on trouve une image spécifique à cette couleur, on l'affiche
+    if (matchedImage) {
+      setCurrentImage(matchedImage.url)
+    }
+  }
+
   const getColorStyle = (c: string) => {
     if (c.startsWith('#')) return c;
-    // On cherche en minuscule pour éviter les erreurs de majuscules
     const lowerC = c.toLowerCase();
     if (colorMap[lowerC]) return colorMap[lowerC];
     return c;
@@ -69,7 +70,8 @@ export default function ProductCard({ data }: ProductCardProps) {
       id: data.id,
       name: data.name,
       price: Number(data.price),
-      images: data.images.map(img => img.url),
+      // 3. On envoie l'image ACTUELLE (la bonne couleur) au panier
+      images: [currentImage], 
       quantity: 1,
       selectedSize: size,
       selectedColor: color
@@ -79,13 +81,14 @@ export default function ProductCard({ data }: ProductCardProps) {
   return (
     <div className="group relative flex flex-col gap-2">
       
-      {/* 1. IMAGE & LIEN */}
+      {/* IMAGE & LIEN */}
       <Link href={`/products/${data.id}`} className="block relative overflow-hidden rounded-lg bg-gray-100 aspect-[3/4]">
         <Image
-          src={data.images?.[0]?.url || '/placeholder.png'}
+          src={currentImage || '/placeholder.png'}
           alt={data.name}
           fill
-          className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
+          // Transition douce lors du changement d'image
+          className="object-cover object-center transition-all duration-500 group-hover:scale-105"
         />
         
         {/* Bouton Panier */}
@@ -98,10 +101,9 @@ export default function ProductCard({ data }: ProductCardProps) {
         </button>
       </Link>
 
-      {/* 2. INFOS DU PRODUIT */}
+      {/* INFOS DU PRODUIT */}
       <div className="space-y-1">
         <div className="flex justify-between items-start gap-2">
-           {/* TITRE SANS SOULIGNEMENT */}
            <Link href={`/products/${data.id}`} className="font-semibold text-sm uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
              {data.name}
            </Link>
@@ -110,22 +112,28 @@ export default function ProductCard({ data }: ProductCardProps) {
            </p>
         </div>
 
-        {/* 3. SÉLECTEURS */}
+        {/* SÉLECTEURS */}
         <div className="flex flex-col gap-2 pt-1">
             
-            {/* Couleurs */}
+            {/* Couleurs (Avec logique de survol) */}
             {colors.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
                 {colors.map((c) => {
                    const bg = getColorStyle(c);
-                   // Détection simple pour savoir si on met le check en noir ou blanc
                    const isLight = bg === '#FFFFFF' || bg === '#FDE68A' || bg === '#FBCFE8' || bg === '#93C5FD' || bg === '#6EE7B7';
                    
                    return (
                     <button
                         key={c}
-                        onClick={(e) => { e.preventDefault(); setColor(c) }}
-                        className={`w-5 h-5 rounded-full border border-gray-200 shadow-sm transition-transform cursor-pointer flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-105'}`}
+                        // AU SURVOL : On change l'image
+                        onMouseEnter={() => handleColorHover(c)}
+                        // AU CLIC : On sélectionne la couleur ET on fixe l'image
+                        onClick={(e) => { 
+                            e.preventDefault(); 
+                            setColor(c);
+                            handleColorHover(c); 
+                        }}
+                        className={`w-5 h-5 rounded-full border border-gray-200 shadow-sm transition-transform cursor-pointer flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
                         style={{ backgroundColor: bg }} 
                         title={c}
                         aria-label={`Couleur ${c}`}
@@ -137,7 +145,7 @@ export default function ProductCard({ data }: ProductCardProps) {
             </div>
             )}
             
-            {/* Tailles */}
+            {/* Tailles (Pas de changement, toujours fonctionnel) */}
             {sizes.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
                 {sizes.map((s) => (

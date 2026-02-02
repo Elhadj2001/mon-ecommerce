@@ -2,9 +2,8 @@
 
 import { CldUploadWidget, CloudinaryUploadWidgetResults } from 'next-cloudinary'
 import { ImagePlus, Trash } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
-// Définition des types
 interface ImageValue {
   url: string
   color?: string | null
@@ -26,24 +25,36 @@ export default function ImageUpload({
   availableColors
 }: ImageUploadProps) {
   
-  // Important : Permet d'éviter les erreurs d'hydratation avec le Widget Cloudinary
-  // ...
-    const [isMounted, setIsMounted] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+  
+  // --- FIX BUG MULTIPLE IMAGES ---
+  // On utilise une Ref pour stocker la valeur "réelle" instantanée
+  // car l'état React 'value' est trop lent à se mettre à jour lors d'un upload multiple
+  const valueRef = useRef(value)
 
-    useEffect(() => {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsMounted(true)
-    }, [])
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
-    if (!isMounted) return null
-    // ...
+  // On garde la Ref synchronisée avec la valeur du parent à chaque rendu
+  useEffect(() => {
+    valueRef.current = value
+  }, [value])
 
-  // Typage strict du résultat de Cloudinary
+  if (!isMounted) return null
+
   const onUpload = (result: CloudinaryUploadWidgetResults) => {
-    if (result.info && typeof result.info === 'object' && 'secure_url' in result.info) {
+    // On vérifie strictement que l'upload est un succès
+    if (result.event === 'success' && result.info && typeof result.info === 'object' && 'secure_url' in result.info) {
        const secureUrl = (result.info as { secure_url: string }).secure_url
-       // Ajout de l'image (couleur null par défaut)
-       onChange([...value, { url: secureUrl, color: null }])
+       
+       // FIX : On utilise valueRef.current au lieu de value pour avoir la liste à jour
+       const currentImages = valueRef.current
+       
+       // On évite les doublons (si Cloudinary renvoie deux fois le même event)
+       if (!currentImages.find(img => img.url === secureUrl)) {
+          onChange([...currentImages, { url: secureUrl, color: null }])
+       }
     }
   }
 
@@ -57,31 +68,29 @@ export default function ImageUpload({
     onChange(updatedImages)
   }
 
-  // Si on n'est pas encore monté (côté serveur), on n'affiche rien pour éviter les bugs
-  if (!isMounted) return null
-
   return (
     <div className="mb-4">
       <div className="mb-4 flex flex-wrap gap-4">
         {value.map((image) => (
-          <div key={image.url} className="relative w-[200px] bg-gray-50 border rounded-md p-2 shadow-sm">
+          <div key={image.url} className="relative w-[200px] bg-gray-50 border rounded-md p-2 shadow-sm group">
             
             {/* Bouton Supprimer */}
             <div className="absolute z-10 top-0 right-0">
               <button
                 type="button"
                 onClick={() => onRemove(image.url)}
-                className="bg-red-500 text-white p-1.5 rounded-bl-md hover:bg-red-600 transition"
+                className="bg-red-500 text-white p-1.5 rounded-bl-md hover:bg-red-600 transition opacity-90 hover:opacity-100"
               >
                 <Trash className="h-4 w-4" />
               </button>
             </div>
 
-            {/* IMAGE (Utilisation de <img> standard pour éviter les erreurs de config Next.js) */}
+            {/* IMAGE */}
             <div className="relative w-full h-[200px] mb-2 rounded-md overflow-hidden border border-gray-200 bg-white">
+              {/* Utilisation de object-contain pour voir l'image entière comme demandé */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                className="object-cover w-full h-full"
+                className="object-contain w-full h-full"
                 alt="Image produit"
                 src={image.url}
               />
@@ -98,7 +107,7 @@ export default function ImageUpload({
                 onChange={(e) => onUpdateColor(image.url, e.target.value)}
                 className="w-full text-xs p-1.5 border rounded bg-white text-black font-medium focus:ring-1 focus:ring-black cursor-pointer"
               >
-                <option value="all">🌍 Toutes les couleurs</option>
+                <option value="all">🌍 Toutes</option>
                 {availableColors.map((color) => (
                   <option key={color} value={color}>
                     🎨 {color}
@@ -111,10 +120,10 @@ export default function ImageUpload({
       </div>
 
       <CldUploadWidget 
-        onSuccess={onUpload} 
-        uploadPreset="ecommerce_preset" // Assure-toi que c'est le bon preset
+        onSuccess={onUpload} // Note: on utilise onSuccess au lieu de onUpload pour la V6
+        uploadPreset="ecommerce_preset" 
         options={{
-          multiple: true,
+          multiple: true, // Ceci cause le bug sans le useRef fix
           maxFiles: 10,
           resourceType: "image"
         }}
