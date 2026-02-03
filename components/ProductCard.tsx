@@ -7,9 +7,10 @@ import { useState, MouseEventHandler } from 'react'
 import { useCart } from '@/hooks/use-cart'
 import { ShoppingBag, Check } from 'lucide-react'
 
-// On étend le type pour inclure la couleur dans les images
-interface ProductWithImages extends Omit<Product, 'price'> {
+// On étend le type pour inclure la couleur dans les images et le prix d'origine
+interface ProductWithImages extends Omit<Product, 'price' | 'originalPrice'> {
   price: number
+  originalPrice?: number | null // <--- NOUVEAU
   images: { url: string; color?: string | null }[]
 }
 
@@ -78,11 +79,22 @@ export default function ProductCard({ data }: ProductCardProps) {
     })
   }
 
+  // Calcul pour savoir s'il y a une promo active
+  const hasPromo = data.originalPrice && data.originalPrice > data.price
+
   return (
     <div className="group relative flex flex-col gap-2">
       
       {/* IMAGE & LIEN */}
       <Link href={`/products/${data.id}`} className="block relative overflow-hidden rounded-lg bg-gray-100 aspect-[3/4]">
+        
+        {/* BADGE PROMO (Nouveau) */}
+        {hasPromo && (
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 uppercase tracking-widest z-10 rounded-sm">
+                Promo
+            </div>
+        )}
+
         <Image
           src={currentImage || '/placeholder.png'}
           alt={data.name}
@@ -107,9 +119,24 @@ export default function ProductCard({ data }: ProductCardProps) {
            <Link href={`/products/${data.id}`} className="font-semibold text-sm uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
              {data.name}
            </Link>
-           <p className="font-bold text-sm whitespace-nowrap">
-             {Number(data.price).toFixed(2)} €
-           </p>
+           
+           {/* AFFICHAGE PRIX INTELLIGENT (Nouveau) */}
+           <div className="flex flex-col items-end">
+              {hasPromo ? (
+                  <>
+                      <span className="text-xs text-gray-400 line-through">
+                          {data.originalPrice?.toFixed(2)} €
+                      </span>
+                      <span className="font-bold text-sm text-red-600">
+                          {Number(data.price).toFixed(2)} €
+                      </span>
+                  </>
+              ) : (
+                  <span className="font-bold text-sm">
+                      {Number(data.price).toFixed(2)} €
+                  </span>
+              )}
+           </div>
         </div>
 
         {/* SÉLECTEURS */}

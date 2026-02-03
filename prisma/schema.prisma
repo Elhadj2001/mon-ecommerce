@@ -26,6 +26,7 @@ model Product {
   name        String
   description String
   price       Decimal
+  originalPrice Decimal?  // <--- NOUVEAU : Prix barré (optionnel)
   stock       Int
   
   images      Image[]

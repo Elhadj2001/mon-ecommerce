@@ -15,23 +15,21 @@ import { Trash, Plus, RotateCcw, Check, Palette, X } from "lucide-react"
 const formSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   price: z.coerce.number().min(0.01, "Prix requis"),
+  originalPrice: z.coerce.number().optional(), 
   stock: z.coerce.number().min(0, "Stock minimum 0"),
   categoryId: z.string().min(1, "Catégorie requise"),
   description: z.string().min(1, "Description requise"),
-  
-  // --- CORRECTION MAJEURE ICI ---
-  // On autorise la propriété 'color' (qui peut être null ou string)
   images: z.object({ 
     url: z.string(), 
     color: z.string().optional().nullable() 
   }).array().min(1, "Au moins une image"),
-  
   sizes: z.array(z.string()).min(1, "Au moins une taille"),
   colors: z.array(z.string()).min(1, "Au moins une couleur"),
   isFeatured: z.boolean().default(false),
   isArchived: z.boolean().default(false),
 })
 
+// On extrait le type TypeScript à partir du schéma Zod
 type ProductFormValues = z.infer<typeof formSchema>
 
 interface ProductFormProps {
@@ -41,7 +39,6 @@ interface ProductFormProps {
 
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "36", "38", "40", "42", "44"]
 
-// --- PALETTE RICHE ---
 const RICH_COLORS = [
   { name: 'Noir Mat', hex: '#171717' },
   { name: 'Blanc Pur', hex: '#FFFFFF' },
@@ -72,16 +69,32 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
   const title = initialData ? "Modifier le produit" : "Créer un produit"
   const action = initialData ? "Sauvegarder" : "Créer"
 
+  // --- CORRECTION MAJEURE ICI ---
   const form = useForm<ProductFormValues>({
+    // L'ajout de "as any" ici résout le conflit de typage entre Zod et React Hook Form
+    // C'est nécessaire car Zod infère parfois des types légèrement différents de ce que RHF attend
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(formSchema) as any,
+    
     defaultValues: initialData ? {
       ...initialData,
       price: parseFloat(String(initialData.price)),
+      // Conversion stricte pour originalPrice : soit number, soit undefined (pas null)
+      originalPrice: initialData.originalPrice ? parseFloat(String(initialData.originalPrice)) : undefined,
       sizes: initialData.sizes || [],
       colors: initialData.colors || [],
     } : {
-      name: '', images: [], price: 0, stock: 0, categoryId: '', description: '', sizes: [], colors: [], isFeatured: false, isArchived: false,
+      name: '', 
+      images: [], 
+      price: 0, 
+      originalPrice: undefined, // Important : undefined et pas 0 pour ne pas afficher 0.00€
+      stock: 0, 
+      categoryId: '', 
+      description: '', 
+      sizes: [], 
+      colors: [], 
+      isFeatured: false, 
+      isArchived: false,
     }
   })
 
@@ -111,7 +124,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
     } else {
       form.setValue(field, [...current, value])
     }
-    form.trigger(field) 
+    form.trigger(field) // Force la validation du champ après modification
   }
 
   const addCustomColor = () => {
@@ -150,16 +163,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
         <div className="bg-gray-50 p-6 rounded-lg border border-dashed border-gray-300">
           <label className="text-lg font-semibold block mb-4">Galerie d&apos;images</label>
           <ImageUpload 
-            // On s'assure de passer l'objet complet { url, color }
             value={form.watch("images").map((image) => ({ url: image.url, color: image.color }))}
             disabled={loading}
             onChange={(newImages) => {
-                // On met à jour le formulaire en gardant la structure { url, color }
                 form.setValue("images", newImages, { shouldValidate: true })
             }}
             onRemove={(url) => form.setValue("images", form.getValues("images").filter((current) => current.url !== url))}
-            
-            // On passe les couleurs sélectionnées (ex: ["Noir Mat", "Rouge Vif"])
             availableColors={form.watch('colors')}
           />
           {form.formState.errors.images && <p className="text-red-500 text-sm mt-2 font-medium">⚠️ {form.formState.errors.images.message}</p>}
@@ -175,6 +184,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
               disabled={loading} 
               {...form.register("name")} 
             />
+            {form.formState.errors.name && <p className="text-red-500 text-sm">⚠️ {form.formState.errors.name.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -197,7 +207,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                     placeholder="Entrez le nom de la nouvelle catégorie..."
                     disabled={loading} 
                     {...form.register("categoryId")} 
-               />
+                />
             ) : (
                 <select 
                     className="w-full border border-gray-300 p-3 rounded-lg bg-white focus:ring-2 focus:ring-black outline-none transition cursor-pointer"
@@ -213,16 +223,33 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
             {form.formState.errors.categoryId && <p className="text-red-500 text-sm mt-1">⚠️ Catégorie requise</p>}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Prix (€)</label>
-            <div className="relative">
-                <input 
-                    type="number" step="0.01"
-                    className="w-full border border-gray-300 p-3 rounded-lg pl-8 focus:ring-2 focus:ring-black outline-none transition"
-                    disabled={loading} {...form.register("price")} 
-                />
-                <span className="absolute left-3 top-3 text-gray-400">€</span>
-            </div>
+          {/* GESTION DES PRIX */}
+          <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Prix de vente (€)</label>
+                <div className="relative">
+                    <input 
+                        type="number" step="0.01"
+                        className="w-full border border-gray-300 p-3 rounded-lg pl-8 focus:ring-2 focus:ring-black outline-none transition"
+                        disabled={loading} {...form.register("price")} 
+                    />
+                    <span className="absolute left-3 top-3 text-gray-400">€</span>
+                </div>
+                {form.formState.errors.price && <p className="text-red-500 text-sm">⚠️ Requis</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-500">Prix d&apos;origine (Promo)</label>
+                <div className="relative">
+                    <input 
+                        type="number" step="0.01"
+                        placeholder="Optionnel"
+                        className="w-full border border-gray-200 bg-gray-50 p-3 rounded-lg pl-8 focus:ring-2 focus:ring-red-500 outline-none transition"
+                        disabled={loading} {...form.register("originalPrice")} 
+                    />
+                    <span className="absolute left-3 top-3 text-gray-400">€</span>
+                </div>
+              </div>
           </div>
 
           <div className="space-y-2">
@@ -243,6 +270,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
             disabled={loading} 
             {...form.register("description")} 
           />
+          {form.formState.errors.description && <p className="text-red-500 text-sm">⚠️ Requis</p>}
         </div>
 
         {/* SECTION VARIANTES */}
@@ -280,7 +308,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                 </label>
                 
                 <div className="space-y-4">
-                  {/* Palette prédéfinie */}
                   <div className="flex flex-wrap gap-3">
                       {RICH_COLORS.map((colorItem) => {
                           const isSelected = selectedColors?.includes(colorItem.name)
@@ -291,10 +318,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                                   onClick={() => toggleSelection("colors", colorItem.name)}
                                   title={colorItem.name}
                                   className={`
-                                      w-10 h-10 rounded-full cursor-pointer border-2 transition-all shadow-sm flex items-center justify-center relative group
-                                      ${isSelected 
-                                          ? `ring-2 ring-offset-2 scale-110 ${isWhite ? 'ring-gray-300 border-gray-300' : 'ring-black border-transparent'}` 
-                                          : `hover:scale-105 ${isWhite ? 'border-gray-200' : 'border-transparent'}`}
+                                    w-10 h-10 rounded-full cursor-pointer border-2 transition-all shadow-sm flex items-center justify-center relative group
+                                    ${isSelected 
+                                      ? `ring-2 ring-offset-2 scale-110 ${isWhite ? 'ring-gray-300 border-gray-300' : 'ring-black border-transparent'}` 
+                                      : `hover:scale-105 ${isWhite ? 'border-gray-200' : 'border-transparent'}`}
                                   `}
                                   style={{ backgroundColor: colorItem.hex }}
                               >
@@ -309,26 +336,24 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                       })}
                   </div>
 
-                  {/* Sélecteur personnalisé */}
                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                     <input 
-                       type="color" 
-                       value={customColorHex}
-                       onChange={(e) => setCustomColorHex(e.target.value)}
-                       className="w-10 h-10 rounded cursor-pointer border-none p-0"
-                       title="Choisir une couleur personnalisée"
-                     />
-                     <span className="text-sm font-mono text-gray-600">{customColorHex}</span>
-                     <button
-                       type="button"
-                       onClick={addCustomColor}
-                       className="ml-auto text-sm bg-white border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-100 transition flex items-center gap-1"
-                     >
-                       <Plus size={14} /> Ajouter ce HEX
-                     </button>
+                      <input 
+                        type="color" 
+                        value={customColorHex}
+                        onChange={(e) => setCustomColorHex(e.target.value)}
+                        className="w-10 h-10 rounded cursor-pointer border-none p-0"
+                        title="Choisir une couleur personnalisée"
+                      />
+                      <span className="text-sm font-mono text-gray-600">{customColorHex}</span>
+                      <button
+                        type="button"
+                        onClick={addCustomColor}
+                        className="ml-auto text-sm bg-white border border-gray-300 px-3 py-1.5 rounded-md hover:bg-gray-100 transition flex items-center gap-1"
+                      >
+                        <Plus size={14} /> Ajouter ce HEX
+                      </button>
                   </div>
 
-                  {/* Liste des couleurs personnalisées ajoutées */}
                   {selectedColors?.filter(c => c.startsWith('#')).length > 0 && (
                     <div className="flex flex-wrap gap-2 mt-2">
                       {selectedColors.filter(c => c.startsWith('#')).map(hexColor => (
