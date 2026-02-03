@@ -7,10 +7,9 @@ import { useState, MouseEventHandler } from 'react'
 import { useCart } from '@/hooks/use-cart'
 import { ShoppingBag, Check } from 'lucide-react'
 
-// On étend le type pour inclure la couleur dans les images et le prix d'origine
 interface ProductWithImages extends Omit<Product, 'price' | 'originalPrice'> {
   price: number
-  originalPrice?: number | null // <--- NOUVEAU
+  originalPrice?: number | null
   images: { url: string; color?: string | null }[]
 }
 
@@ -18,7 +17,6 @@ interface ProductCardProps {
   data: ProductWithImages
 }
 
-// TA PALETTE DE COULEURS
 const colorMap: Record<string, string> = {
   'noir mat': '#171717', 'blanc pur': '#FFFFFF', 'gris chiné': '#9CA3AF',
   'anthracite': '#374151', 'bleu marine': '#1E3A8A', 'bleu roi': '#2563EB',
@@ -36,18 +34,14 @@ const colorMap: Record<string, string> = {
 export default function ProductCard({ data }: ProductCardProps) {
   const [size, setSize] = useState('')
   const [color, setColor] = useState('')
-  
-  // 1. État pour l'image affichée (par défaut la première)
   const [currentImage, setCurrentImage] = useState(data.images?.[0]?.url)
   
   const cart = useCart()
   const sizes = data.sizes || []
   const colors = data.colors || []
 
-  // 2. Fonction magique : Trouve l'image associée à la couleur survolée
   const handleColorHover = (colorName: string) => {
     const matchedImage = data.images.find(img => img.color === colorName)
-    // Si on trouve une image spécifique à cette couleur, on l'affiche
     if (matchedImage) {
       setCurrentImage(matchedImage.url)
     }
@@ -71,26 +65,20 @@ export default function ProductCard({ data }: ProductCardProps) {
       id: data.id,
       name: data.name,
       price: Number(data.price),
-      // 3. On envoie l'image ACTUELLE (la bonne couleur) au panier
-      images: [currentImage], 
+      images: [currentImage || ''], 
       quantity: 1,
       selectedSize: size,
       selectedColor: color
     })
   }
 
-  // Calcul pour savoir s'il y a une promo active
   const hasPromo = data.originalPrice && data.originalPrice > data.price
 
   return (
-    <div className="group relative flex flex-col gap-2">
-      
-      {/* IMAGE & LIEN */}
+    <div className="group relative flex flex-col gap-2 h-full">
       <Link href={`/products/${data.id}`} className="block relative overflow-hidden rounded-lg bg-gray-100 aspect-[3/4]">
-        
-        {/* BADGE PROMO (Nouveau) */}
         {hasPromo && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 uppercase tracking-widest z-10 rounded-sm">
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-widest z-10">
                 Promo
             </div>
         )}
@@ -99,91 +87,61 @@ export default function ProductCard({ data }: ProductCardProps) {
           src={currentImage || '/placeholder.png'}
           alt={data.name}
           fill
-          // Transition douce lors du changement d'image
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
           className="object-cover object-center transition-all duration-500 group-hover:scale-105"
         />
         
-        {/* Bouton Panier */}
         <button 
           onClick={handleAddToCart}
-          className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-md text-black hover:bg-black hover:text-white transition-all duration-200 z-20 active:scale-95"
-          aria-label="Ajouter au panier"
+          className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-black hover:bg-black hover:text-white transition-all duration-200 z-20 active:scale-95"
         >
-          <ShoppingBag size={18} />
+          <ShoppingBag size={16} />
         </button>
       </Link>
 
-      {/* INFOS DU PRODUIT */}
       <div className="space-y-1">
-        <div className="flex justify-between items-start gap-2">
-           <Link href={`/products/${data.id}`} className="font-semibold text-sm uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
-             {data.name}
-           </Link>
-           
-           {/* AFFICHAGE PRIX INTELLIGENT (Nouveau) */}
-           <div className="flex flex-col items-end">
+        <div className="flex justify-between items-start gap-1">
+          <Link href={`/products/${data.id}`} className="font-bold text-[11px] sm:text-[13px] uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
+            {data.name}
+          </Link>
+          
+          <div className="flex flex-col items-end shrink-0">
               {hasPromo ? (
                   <>
-                      <span className="text-xs text-gray-400 line-through">
-                          {data.originalPrice?.toFixed(2)} €
+                      <span className="text-[9px] text-gray-400 line-through leading-none">
+                          {data.originalPrice?.toFixed(2)}€
                       </span>
-                      <span className="font-bold text-sm text-red-600">
-                          {Number(data.price).toFixed(2)} €
+                      <span className="font-bold text-[11px] text-red-600 leading-none">
+                          {data.price.toFixed(2)}€
                       </span>
                   </>
               ) : (
-                  <span className="font-bold text-sm">
-                      {Number(data.price).toFixed(2)} €
+                  <span className="font-bold text-[11px]">
+                      {data.price.toFixed(2)}€
                   </span>
               )}
-           </div>
+          </div>
         </div>
 
-        {/* SÉLECTEURS */}
-        <div className="flex flex-col gap-2 pt-1">
-            
-            {/* Couleurs (Avec logique de survol) */}
+        <div className="flex flex-col gap-2">
             {colors.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-                {colors.map((c) => {
+            <div className="flex flex-wrap gap-1">
+                {colors.slice(0, 5).map((c) => {
                    const bg = getColorStyle(c);
-                   const isLight = bg === '#FFFFFF' || bg === '#FDE68A' || bg === '#FBCFE8' || bg === '#93C5FD' || bg === '#6EE7B7';
-                   
+                   const isLight = bg === '#FFFFFF' || bg === '#FDE68A';
                    return (
                     <button
                         key={c}
-                        // AU SURVOL : On change l'image
                         onMouseEnter={() => handleColorHover(c)}
-                        // AU CLIC : On sélectionne la couleur ET on fixe l'image
-                        onClick={(e) => { 
-                            e.preventDefault(); 
-                            setColor(c);
-                            handleColorHover(c); 
-                        }}
-                        className={`w-5 h-5 rounded-full border border-gray-200 shadow-sm transition-transform cursor-pointer flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
+                        onClick={(e) => { e.preventDefault(); setColor(c); handleColorHover(c); }}
+                        className={`w-4 h-4 rounded-full border border-gray-200 shadow-sm transition-transform ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
                         style={{ backgroundColor: bg }} 
-                        title={c}
-                        aria-label={`Couleur ${c}`}
                     >
-                        {color === c && <Check size={10} className={isLight ? 'text-black' : 'text-white'} />}
+                        {color === c && <Check size={8} className={isLight ? 'text-black' : 'text-white'} />}
                     </button>
                    )
                 })}
-            </div>
-            )}
-            
-            {/* Tailles (Pas de changement, toujours fonctionnel) */}
-            {sizes.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-                {sizes.map((s) => (
-                <button
-                    key={s}
-                    onClick={(e) => { e.preventDefault(); setSize(s) }}
-                    className={`text-xs min-w-[24px] h-6 px-1 border rounded flex items-center justify-center transition-colors uppercase font-medium ${size === s ? 'bg-black text-white border-black' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
-                >
-                    {s}
-                </button>
-                ))}
+                {colors.length > 5 && <span className="text-[9px] text-gray-400">+{colors.length - 5}</span>}
             </div>
             )}
         </div>
