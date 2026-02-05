@@ -11,25 +11,27 @@ import { Product, Image as ImageType, Category } from "@prisma/client"
 import ImageUpload from "@/components/admin/ImageUpload"
 import { Trash, Plus, RotateCcw, Check, Palette, X } from "lucide-react"
 
-// --- SCHÉMA ZOD ---
+// --- SCHÉMA ZOD (Version Améliorée) ---
 const formSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   price: z.coerce.number().min(0.01, "Prix requis"),
+  // On garde les améliorations : originalPrice et gender
   originalPrice: z.coerce.number().optional(), 
   stock: z.coerce.number().min(0, "Stock minimum 0"),
   categoryId: z.string().min(1, "Catégorie requise"),
+  gender: z.string().min(1, "Le genre est requis"), 
   description: z.string().min(1, "Description requise"),
+  // Validation stricte des images avec couleur
   images: z.object({ 
     url: z.string(), 
     color: z.string().optional().nullable() 
   }).array().min(1, "Au moins une image"),
-  sizes: z.array(z.string()).min(1, "Au moins une taille"),
+  sizes: z.array(z.string()).optional(),
   colors: z.array(z.string()).min(1, "Au moins une couleur"),
   isFeatured: z.boolean().default(false),
   isArchived: z.boolean().default(false),
 })
 
-// On extrait le type TypeScript à partir du schéma Zod
 type ProductFormValues = z.infer<typeof formSchema>
 
 interface ProductFormProps {
@@ -37,7 +39,14 @@ interface ProductFormProps {
   categories: Category[]
 }
 
-const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "36", "38", "40", "42", "44"]
+const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "36", "38", "40", "42", "44", "TU"]
+
+const GENDERS = [
+  { label: "Homme", value: "Homme" },
+  { label: "Femme", value: "Femme" },
+  { label: "Unisexe", value: "Unisexe" },
+  { label: "Enfant", value: "Enfant" },
+]
 
 const RICH_COLORS = [
   { name: 'Noir Mat', hex: '#171717' },
@@ -69,27 +78,25 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
   const title = initialData ? "Modifier le produit" : "Créer un produit"
   const action = initialData ? "Sauvegarder" : "Créer"
 
-  // --- CORRECTION MAJEURE ICI ---
   const form = useForm<ProductFormValues>({
-    // L'ajout de "as any" ici résout le conflit de typage entre Zod et React Hook Form
-    // C'est nécessaire car Zod infère parfois des types légèrement différents de ce que RHF attend
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(formSchema) as any,
-    
     defaultValues: initialData ? {
       ...initialData,
       price: parseFloat(String(initialData.price)),
-      // Conversion stricte pour originalPrice : soit number, soit undefined (pas null)
       originalPrice: initialData.originalPrice ? parseFloat(String(initialData.originalPrice)) : undefined,
       sizes: initialData.sizes || [],
       colors: initialData.colors || [],
+      // @ts-ignore
+      gender: initialData.gender || 'Unisexe', 
     } : {
       name: '', 
       images: [], 
       price: 0, 
-      originalPrice: undefined, // Important : undefined et pas 0 pour ne pas afficher 0.00€
+      originalPrice: undefined,
       stock: 0, 
       categoryId: '', 
+      gender: 'Unisexe',
       description: '', 
       sizes: [], 
       colors: [], 
@@ -98,14 +105,32 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
     }
   })
 
+  // --- C'EST ICI QUE JE CORRIGE LE PROBLÈME ---
   const onSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     try {
       setLoading(true)
-      if (initialData) {
-        await axios.patch(`/api/products/${params.productId}`, data)
-      } else {
-        await axios.post(`/api/products`, data)
+      
+      let finalCategoryId = data.categoryId;
+      
+      // Si "Nouvelle Catégorie", on appelle l'API sans storeId
+      if (isNewCategoryMode) {
+          const res = await axios.post(`/api/categories`, { 
+            name: data.categoryId 
+          }); 
+          finalCategoryId = res.data.id;
       }
+
+      const payload = { ...data, categoryId: finalCategoryId };
+
+      if (initialData) {
+        // Modification : On utilise l'ID du produit (params.productId ou initialData.id)
+        const productId = params.productId || initialData.id;
+        await axios.patch(`/api/products/${productId}`, payload)
+      } else {
+        // Création : URL simple sans storeId
+        await axios.post(`/api/products`, payload)
+      }
+      
       router.refresh()
       router.push(`/admin/products`)
       toast.success("Succès !")
@@ -116,6 +141,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
       setLoading(false)
     }
   }
+  // ------------------------------------------
 
   const toggleSelection = (field: "sizes" | "colors", value: string) => {
     const current = form.getValues(field) || []
@@ -124,7 +150,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
     } else {
       form.setValue(field, [...current, value])
     }
-    form.trigger(field) // Force la validation du champ après modification
+    form.trigger(field)
   }
 
   const addCustomColor = () => {
@@ -149,7 +175,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
             className="bg-red-50 text-red-600 p-3 rounded-full hover:bg-red-100 transition"
             disabled={loading}
             onClick={async () => {
-              setLoading(true); await axios.delete(`/api/products/${params.productId}`); router.refresh(); router.push('/admin/products');
+              setLoading(true); 
+              // Correction URL suppression aussi
+              const productId = params.productId || initialData.id;
+              await axios.delete(`/api/products/${productId}`); 
+              router.refresh(); 
+              router.push('/admin/products');
             }}
           >
             <Trash size={18} />
@@ -252,13 +283,31 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
               </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Stock</label>
-            <input 
-                type="number" 
-                className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-black outline-none transition"
-                disabled={loading} {...form.register("stock")} 
-            />
+          <div className="grid grid-cols-2 gap-4">
+              {/* STOCK */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Stock</label>
+                <input 
+                    type="number" 
+                    className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-black outline-none transition"
+                    disabled={loading} {...form.register("stock")} 
+                />
+              </div>
+
+              {/* GENRE (NOUVEAU) */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Genre (Cible)</label>
+                <select 
+                    className="w-full border border-gray-300 p-3 rounded-lg bg-white focus:ring-2 focus:ring-black outline-none transition cursor-pointer"
+                    disabled={loading} 
+                    {...form.register("gender")}
+                >
+                    {GENDERS.map((g) => (
+                        <option key={g.value} value={g.value}>{g.label}</option>
+                    ))}
+                </select>
+                {form.formState.errors.gender && <p className="text-red-500 text-sm">⚠️ Genre requis</p>}
+              </div>
           </div>
         </div>
 
@@ -276,9 +325,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
         {/* SECTION VARIANTES */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
             
-            {/* TAILLES */}
+            {/* TAILLES (Maintenant Optionnelles) */}
             <div>
-                <label className="text-sm font-bold uppercase tracking-wider text-gray-700 block mb-3">Tailles</label>
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-700 block mb-3">
+                    Tailles <span className="text-xs text-gray-400 font-normal lowercase">(optionnel)</span>
+                </label>
                 <div className="flex flex-wrap gap-3">
                     {SIZES.map((size) => {
                         const isSelected = selectedSizes?.includes(size)
@@ -298,7 +349,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                         )
                     })}
                 </div>
-                {form.formState.errors.sizes && <p className="text-red-500 text-sm mt-2">⚠️ Sélectionnez au moins une taille</p>}
             </div>
 
             {/* COULEURS */}

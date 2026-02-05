@@ -40,6 +40,17 @@ export default function ProductCard({ data }: ProductCardProps) {
   const sizes = data.sizes || []
   const colors = data.colors || []
 
+  // --- 1. SÉCURISATION DES VARIABLES ---
+  const price = Number(data.price)
+  const originalPrice = data.originalPrice ? Number(data.originalPrice) : null
+  
+  // La promo n'est valide QUE si l'ancien prix existe ET est plus grand que le prix actuel
+  const hasPromo = originalPrice !== null && originalPrice > price
+  
+  const discountPercentage = hasPromo && originalPrice
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : 0
+
   const handleColorHover = (colorName: string) => {
     const matchedImage = data.images.find(img => img.color === colorName)
     if (matchedImage) {
@@ -64,7 +75,7 @@ export default function ProductCard({ data }: ProductCardProps) {
     cart.addItem({
       id: data.id,
       name: data.name,
-      price: Number(data.price),
+      price: price,
       images: [currentImage || ''], 
       quantity: 1,
       selectedSize: size,
@@ -72,14 +83,14 @@ export default function ProductCard({ data }: ProductCardProps) {
     })
   }
 
-  const hasPromo = data.originalPrice && data.originalPrice > data.price
-
   return (
     <div className="group relative flex flex-col gap-2 h-full">
       <Link href={`/products/${data.id}`} className="block relative overflow-hidden rounded-lg bg-gray-100 aspect-[3/4]">
-        {hasPromo && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 uppercase tracking-widest z-10">
-                Promo
+        
+        {/* BADGE PROMO */}
+        {hasPromo && discountPercentage > 0 && (
+            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest z-10 rounded-sm shadow-sm">
+                -{discountPercentage}%
             </div>
         )}
 
@@ -87,64 +98,84 @@ export default function ProductCard({ data }: ProductCardProps) {
           src={currentImage || '/placeholder.png'}
           alt={data.name}
           fill
-          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+          sizes="(max-width: 768px) 50vw, 25vw"
           className="object-cover object-center transition-all duration-500 group-hover:scale-105"
         />
         
         <button 
           onClick={handleAddToCart}
-          className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md text-black hover:bg-black hover:text-white transition-all duration-200 z-20 active:scale-95"
+          className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-md text-black hover:bg-black hover:text-white transition-all duration-200 z-20 active:scale-95"
         >
-          <ShoppingBag size={16} />
+          <ShoppingBag size={18} />
         </button>
       </Link>
 
-      <div className="space-y-1">
-        <div className="flex justify-between items-start gap-1">
-          <Link href={`/products/${data.id}`} className="font-bold text-[11px] sm:text-[13px] uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
-            {data.name}
-          </Link>
-          
-          <div className="flex flex-col items-end shrink-0">
-              {hasPromo ? (
+      <div className="space-y-2 px-1">
+        <div className="flex justify-between items-start gap-2">
+           <Link href={`/products/${data.id}`} className="font-bold text-xs sm:text-sm uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
+             {data.name}
+           </Link>
+           
+           <div className="flex flex-col items-end shrink-0">
+              {/* AFFICHAGE DES PRIX */}
+              {hasPromo && originalPrice ? (
                   <>
-                      <span className="text-[9px] text-gray-400 line-through leading-none">
-                          {data.originalPrice?.toFixed(2)}€
+                      <span className="text-[10px] text-gray-400 line-through leading-none">
+                          {originalPrice.toFixed(2)}€
                       </span>
-                      <span className="font-bold text-[11px] text-red-600 leading-none">
-                          {data.price.toFixed(2)}€
+                      <span className="font-bold text-sm text-red-600">
+                          {price.toFixed(2)}€
                       </span>
                   </>
               ) : (
-                  <span className="font-bold text-[11px]">
-                      {data.price.toFixed(2)}€
+                  <span className="font-bold text-sm">
+                      {price.toFixed(2)}€
                   </span>
               )}
-          </div>
+           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
-            {colors.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-                {colors.slice(0, 5).map((c) => {
-                   const bg = getColorStyle(c);
-                   const isLight = bg === '#FFFFFF' || bg === '#FDE68A';
-                   return (
-                    <button
-                        key={c}
-                        onMouseEnter={() => handleColorHover(c)}
-                        onClick={(e) => { e.preventDefault(); setColor(c); handleColorHover(c); }}
-                        className={`w-4 h-4 rounded-full border border-gray-200 shadow-sm transition-transform ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
-                        style={{ backgroundColor: bg }} 
-                    >
-                        {color === c && <Check size={8} className={isLight ? 'text-black' : 'text-white'} />}
-                    </button>
-                   )
-                })}
-                {colors.length > 5 && <span className="text-[9px] text-gray-400">+{colors.length - 5}</span>}
-            </div>
-            )}
-        </div>
+        {/* SECTION TAILLES */}
+        {sizes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {sizes.map((s) => (
+              <button
+                key={s}
+                onClick={(e) => { e.preventDefault(); setSize(s); }}
+                className={`
+                  text-[10px] px-2 py-0.5 border rounded transition-all uppercase font-medium
+                  ${size === s 
+                    ? 'bg-black text-white border-black shadow-sm' 
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-black'}
+                `}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* SECTION COULEURS */}
+        {colors.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {colors.slice(0, 6).map((c) => {
+               const bg = getColorStyle(c);
+               const isLight = bg === '#FFFFFF' || bg === '#FDE68A';
+               return (
+                <button
+                    key={c}
+                    onMouseEnter={() => handleColorHover(c)}
+                    onClick={(e) => { e.preventDefault(); setColor(c); handleColorHover(c); }}
+                    className={`w-5 h-5 rounded-full border border-gray-200 shadow-sm transition-transform flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
+                    style={{ backgroundColor: bg }} 
+                >
+                    {color === c && <Check size={10} className={isLight ? 'text-black' : 'text-white'} />}
+                </button>
+               )
+            })}
+            {colors.length > 6 && <span className="text-[10px] text-gray-400 self-center">+{colors.length - 6}</span>}
+          </div>
+        )}
       </div>
     </div>
   )

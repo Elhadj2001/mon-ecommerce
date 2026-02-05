@@ -5,7 +5,7 @@ import Link from 'next/link'
 export const revalidate = 0 
 
 export default async function Home() {
-  // 1. Récupérer les Nouveautés (8 derniers produits)
+  // 1. Récupérer les Nouveautés
   const newArrivals = await prisma.product.findMany({
     take: 8,
     where: { isArchived: false },
@@ -13,9 +13,11 @@ export default async function Home() {
     include: { images: true }
   })
 
-  // 2. Récupérer les Promotions (Produits avec un prix d'origine rempli)
-  const promotions = await prisma.product.findMany({
-    take: 8,
+  // 2. Récupérer les Promotions
+  // NOTE : Prisma ne permet pas de faire "where originalPrice > price" directement.
+  // On récupère donc les candidats potentiels (ceux qui ont un prix d'origine non null)
+  const potentialPromotions = await prisma.product.findMany({
+    take: 20, // On en prend un peu plus pour filtrer après
     where: { 
       isArchived: false,
       originalPrice: { not: null } 
@@ -23,7 +25,12 @@ export default async function Home() {
     include: { images: true }
   })
 
-  // 3. Récupérer les catégories classiques
+  // FILTRE JAVASCRIPT : On ne garde que les VRAIES promos (Ancien Prix > Nouveau Prix)
+  const promotions = potentialPromotions.filter(product => {
+     return product.originalPrice && product.originalPrice.toNumber() > product.price.toNumber()
+  }).slice(0, 8) // On garde les 8 meilleurs
+
+  // 3. Récupérer les catégories
   const categories = await prisma.category.findMany({
     include: {
       products: {
@@ -38,42 +45,35 @@ export default async function Home() {
 
   const activeCategories = categories.filter(cat => cat.products.length > 0)
 
-  // Composant local pour le Carousel (Évite de créer un fichier de plus pour l'instant)
-  // Dans app/page.tsx
-
-const ProductCarousel = ({ title, products, subtitle }: { title: string, products: any[], subtitle?: string }) => (
-  <section className="space-y-4">
-    <div className="flex items-end justify-between px-4 sm:px-0">
-      <div>
-          <h2 className="text-xl font-black tracking-tighter text-gray-900 uppercase sm:text-3xl">{title}</h2>
-          {subtitle && <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">{subtitle}</p>}
+  const ProductCarousel = ({ title, products, subtitle }: { title: string, products: any[], subtitle?: string }) => (
+    <section className="space-y-4">
+      <div className="flex items-end justify-between px-4 sm:px-0">
+        <div>
+            <h2 className="text-xl font-black tracking-tighter text-gray-900 uppercase sm:text-3xl">{title}</h2>
+            {subtitle && <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">{subtitle}</p>}
+        </div>
       </div>
-    </div>
-    
-    <div className="relative">
-      {/* min-w-[42%] : Permet d'en voir 2 entiers et le début du 3ème (Style Shein)
-          gap-3 : Espacement plus serré pour faire "miniature"
-      */}
-      <div className="flex w-full gap-3 overflow-x-auto pb-4 pt-2 scrollbar-hide snap-x snap-mandatory px-4 sm:px-0">
-        {products.map((product) => (
-          <div key={product.id} className="min-w-[42%] sm:min-w-[30%] md:min-w-[25%] lg:min-w-[18%] snap-start">
-            <ProductCard 
-              data={{
-                ...product,
-                price: product.price.toNumber(),
-                originalPrice: product.originalPrice ? product.originalPrice.toNumber() : null
-              }} 
-            />
-          </div>
-        ))}
+      
+      <div className="relative">
+        <div className="flex w-full gap-3 overflow-x-auto pb-4 pt-2 scrollbar-hide snap-x snap-mandatory px-4 sm:px-0">
+          {products.map((product) => (
+            <div key={product.id} className="min-w-[42%] sm:min-w-[30%] md:min-w-[25%] lg:min-w-[18%] snap-start">
+              <ProductCard 
+                data={{
+                  ...product,
+                  price: product.price.toNumber(),
+                  originalPrice: product.originalPrice ? product.originalPrice.toNumber() : null
+                }} 
+              />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-  </section>
-)
+    </section>
+  )
 
   return (
     <main className="min-h-screen bg-white">
-      
       {/* SECTION HERO */}
       <div className="relative overflow-hidden bg-gray-50">
         <div className="pb-80 pt-16 sm:pb-40 sm:pt-24 lg:pb-48 lg:pt-40">
@@ -93,6 +93,7 @@ const ProductCarousel = ({ title, products, subtitle }: { title: string, product
             </div>
             
             <div className="mt-10 mb-10 md:absolute md:right-0 md:top-0 md:mt-20 md:w-1/2 lg:mt-0">
+               {/* eslint-disable-next-line @next/next/no-img-element */}
                <img 
                  src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80" 
                  alt="Hero" 
@@ -123,7 +124,7 @@ const ProductCarousel = ({ title, products, subtitle }: { title: string, product
             />
         )}
 
-        {/* 3. GRILLES PAR CATÉGORIES (Correction 2 colonnes Mobile) */}
+        {/* 3. GRILLES PAR CATÉGORIES */}
         {activeCategories.map((category) => (
           <section key={category.id} className="px-4 sm:px-0">
             <div className="flex items-center justify-between mb-8 border-b border-gray-100 pb-4">
@@ -138,7 +139,6 @@ const ProductCarousel = ({ title, products, subtitle }: { title: string, product
               </Link>
             </div>
 
-            {/* CORRECTION ICI : grid-cols-2 forcé sur mobile */}
             <div className="grid grid-cols-2 gap-y-10 gap-x-4 md:grid-cols-3 lg:grid-cols-4">
               {category.products.map((product) => (
                 <ProductCard 

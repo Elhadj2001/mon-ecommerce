@@ -1,123 +1,77 @@
-import { prisma } from '@/lib/prisma'
-import ProductCard from '@/components/ProductCard'
-import { notFound } from 'next/navigation'
-import Link from 'next/link'
+import { prisma } from "@/lib/prisma"
+import ProductCard from "@/components/ProductCard"
+import { notFound } from "next/navigation"
+
+export const revalidate = 0
 
 interface CategoryPageProps {
-  params: Promise<{ id: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+  params: {
+    categoryId: string
+  }
+  searchParams: {
+    color?: string
+    size?: string
+  }
 }
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
-  const { id } = await params
-  const { gender } = await searchParams
-  const genderFilter = typeof gender === 'string' ? gender : undefined
-
-  // 1. REQUÊTE DISTINCT : Genres disponibles
-  // Note: On ajoute une condition pour ignorer les genres nulls s'il y en a
-  const distinctGenders = await prisma.product.findMany({
-    where: { 
-      categoryId: id,
-      gender: { not: null } 
-    },
-    select: { gender: true },
-    distinct: ['gender']
-  })
-
-  // On transforme le résultat en un tableau simple et on filtre les nulls au cas où
-  const availableGenders = distinctGenders
-    .map(g => g.gender)
-    .filter((g): g is string => g !== null)
-
-  // 2. On récupère la catégorie et les produits filtrés
+  // Pour Next.js 15, il faudrait await params, mais pour 13/14 c'est direct
+  // const resolvedParams = await params; 
+  
   const category = await prisma.category.findUnique({
-    where: { id },
+    where: {
+      id: params.categoryId
+    },
     include: {
       products: {
         where: {
-          // Si genderFilter est undefined, Prisma ignore cette ligne (c'est ce qu'on veut)
-          gender: genderFilter 
+          isArchived: false
         },
         include: {
-            images: true // <--- INDISPENSABLE !
+          images: true
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: {
+          createdAt: 'desc'
+        }
       }
     }
   })
 
-  if (!category) return notFound()
-
-  // Fonction de style pour les boutons
-  const getFilterStyle = (currentFilter: string | undefined) => {
-    const isActive = genderFilter === currentFilter
-    return `px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border transition-all ${
-      isActive 
-        ? 'bg-black text-white border-black' 
-        : 'bg-white text-gray-500 border-gray-200 hover:border-black hover:text-black'
-    }`
+  if (!category) {
+    return notFound()
   }
 
-  const order = ['Homme', 'Femme', 'Enfant', 'Unisexe']
-  const sortedGenders = order.filter(g => availableGenders.includes(g))
-
   return (
-    <div className="bg-white min-h-screen">
-      
-      {/* EN-TÊTE */}
-      <div className="bg-gray-50 border-b mb-8">
-        <div className="mx-auto max-w-7xl px-4 py-12 text-center sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-black uppercase tracking-tighter text-gray-900">
-            {category.name}
-          </h1>
-          <p className="mt-2 text-xs text-gray-500 tracking-[0.2em] uppercase">
-            {category.products.length} articles affichés
-          </p>
+    <div className="bg-white">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
+        
+        <div className="flex items-baseline justify-between border-b border-gray-200 pb-6 mb-8">
+            <h1 className="text-3xl font-black tracking-tight text-gray-900 uppercase">
+                {category.name}
+            </h1>
+            <span className="text-sm text-gray-500 font-medium">
+                {category.products.length} résultat{category.products.length > 1 ? 's' : ''}
+            </span>
         </div>
-      </div>
 
-      {/* FILTRES */}
-      {availableGenders.length > 1 && (
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mb-10">
-          <div className="flex flex-wrap justify-center gap-3">
-            <Link href={`/category/${id}`} className={getFilterStyle(undefined)}>
-              Tout
-            </Link>
-            
-            {sortedGenders.map((g) => (
-              <Link key={g} href={`/category/${id}?gender=${g}`} className={getFilterStyle(g)}>
-                {g}
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* GRILLE PRODUITS */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-24">
         {category.products.length === 0 ? (
-          <div className="text-center py-20 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-            <p className="text-gray-500 text-lg font-medium">Aucun article ne correspond à ce filtre.</p>
-            {genderFilter && (
-               <Link href={`/category/${id}`} className="mt-4 inline-block text-sm text-black underline underline-offset-4">
-                 Voir toute la collection
-               </Link>
-            )}
-          </div>
+           <div className="flex flex-col items-center justify-center py-20 text-center">
+             <p className="text-gray-500">Aucun produit dans cette catégorie.</p>
+           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-4 xl:gap-x-8">
-            {category.products.map((product) => (
-              // Dans app/category/[id]/page.tsx
-
-            <ProductCard 
-              key={product.id} 
-              data={{
-                ...product, // On passe TOUT le produit d'abord
-                price: product.price.toNumber() // On corrige le format du prix ensuite
-              }} 
-            />
-            ))}
-          </div>
+           <div className="grid grid-cols-2 gap-y-10 gap-x-6 sm:grid-cols-3 lg:grid-cols-4 xl:gap-x-8">
+             {category.products.map((product) => (
+               <ProductCard 
+                 key={product.id} 
+                 data={{
+                    ...product,
+                    // CORRECTION ICI : Conversion explicite Decimal -> Number
+                    price: product.price.toNumber(),
+                    originalPrice: product.originalPrice ? product.originalPrice.toNumber() : null
+                 }} 
+               />
+             ))}
+           </div>
         )}
       </div>
     </div>

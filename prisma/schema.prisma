@@ -6,11 +6,9 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  url       = env("DATABASE_URL") // Utilise le Pooler pour le site
-  //directUrl = env("DIRECT_URL")   // Utilise la connexion directe pour les modifs
+  url       = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")
 }
-
-// --- MODÈLES ---
 
 model User {
   id        String   @id @default(uuid())
@@ -22,30 +20,41 @@ model User {
 }
 
 model Product {
-  id          String      @id @default(uuid())
+  id            String    @id @default(uuid())
+  name          String
+  description   String
+  price         Decimal
+  originalPrice Decimal?  // ✅ On garde
+  stock         Int
+  
+  // PLUS DE STORE ID ICI
+  
+  categoryId    String
+  category      Category  @relation("CategoryToProduct", fields: [categoryId], references: [id])
+
+  isFeatured    Boolean   @default(false)
+  isArchived    Boolean   @default(false)
+  
+  sizes         String[]
+  colors        String[]
+  gender        String    @default("Unisexe") // ✅ On garde
+  
+  images        Image[]
+  orderItems    OrderItem[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([categoryId])
+}
+
+model Category {
+  id          String    @id @default(uuid())
   name        String
-  description String
-  price       Decimal
-  originalPrice Decimal?  // <--- NOUVEAU : Prix barré (optionnel)
-  stock       Int
-  
-  images      Image[]
-  
-  categoryId  String
-  category    Category    @relation(fields: [categoryId], references: [id])
-  
-  isFeatured  Boolean     @default(false)
-  isArchived  Boolean     @default(false) // Le champ qui manquait
-  
-  sizes       String[]
-  colors      String[]
-  // AJOUTE CETTE LIGNE :
-  gender      String?  @default("Unisex")
-  
-  orderItems  OrderItem[]
-  
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  // PLUS DE STORE ID ICI
+  products    Product[] @relation("CategoryToProduct")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Image {
@@ -59,24 +68,16 @@ model Image {
   @@index([productId])
 }
 
-model Category {
-  id        String    @id @default(uuid())
-  name      String
-  products  Product[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
-
 model Order {
-  id         String      @id @default(uuid())
-  userId     String?     
-  user       User?       @relation(fields: [userId], references: [id])
+  id        String      @id @default(uuid())
+  userId    String?     
+  user      User?       @relation(fields: [userId], references: [id])
   orderItems OrderItem[]
-  isPaid     Boolean     @default(false)
-  phone      String      @default("")
-  address    String      @default("")
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  isPaid    Boolean     @default(false)
+  phone     String      @default("")
+  address   String      @default("")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 }
 
 model OrderItem {
