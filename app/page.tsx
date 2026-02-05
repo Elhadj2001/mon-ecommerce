@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import ProductCard from '@/components/ProductCard'
 import Link from 'next/link'
 
+// On garde la revalidation à 0 pour avoir les stocks en temps réel
 export const revalidate = 0 
 
 export default async function Home() {
@@ -14,10 +15,8 @@ export default async function Home() {
   })
 
   // 2. Récupérer les Promotions
-  // NOTE : Prisma ne permet pas de faire "where originalPrice > price" directement.
-  // On récupère donc les candidats potentiels (ceux qui ont un prix d'origine non null)
   const potentialPromotions = await prisma.product.findMany({
-    take: 20, // On en prend un peu plus pour filtrer après
+    take: 20,
     where: { 
       isArchived: false,
       originalPrice: { not: null } 
@@ -25,10 +24,9 @@ export default async function Home() {
     include: { images: true }
   })
 
-  // FILTRE JAVASCRIPT : On ne garde que les VRAIES promos (Ancien Prix > Nouveau Prix)
   const promotions = potentialPromotions.filter(product => {
      return product.originalPrice && product.originalPrice.toNumber() > product.price.toNumber()
-  }).slice(0, 8) // On garde les 8 meilleurs
+  }).slice(0, 8)
 
   // 3. Récupérer les catégories
   const categories = await prisma.category.findMany({
@@ -45,6 +43,7 @@ export default async function Home() {
 
   const activeCategories = categories.filter(cat => cat.products.length > 0)
 
+  // --- CORRECTION ICI : Le composant Carousel ---
   const ProductCarousel = ({ title, products, subtitle }: { title: string, products: any[], subtitle?: string }) => (
     <section className="space-y-4">
       <div className="flex items-end justify-between px-4 sm:px-0">
@@ -55,9 +54,18 @@ export default async function Home() {
       </div>
       
       <div className="relative">
-        <div className="flex w-full gap-3 overflow-x-auto pb-4 pt-2 scrollbar-hide snap-x snap-mandatory px-4 sm:px-0">
+        {/* CORRECTION CSS : 
+            Ajout de 'items-stretch' pour que toutes les cartes aient la même hauteur visuelle
+        */}
+        <div className="flex w-full gap-3 overflow-x-auto pb-4 pt-2 scrollbar-hide snap-x snap-mandatory px-4 sm:px-0 items-stretch">
           {products.map((product) => (
-            <div key={product.id} className="min-w-[40%] sm:min-w-[28%] md:min-w-[22%] lg:min-w-[18%] snap-start">
+            <div 
+                key={product.id} 
+                // CORRECTION CSS MAJEURE :
+                // Remplace 'min-w' par 'w' et ajoute 'flex-none'.
+                // Cela force chaque carte à respecter strictement la largeur, sans déborder si le titre est long.
+                className="w-[40%] sm:w-[28%] md:w-[22%] lg:w-[18%] flex-none snap-start"
+            >
               <ProductCard 
                 data={{
                   ...product,
