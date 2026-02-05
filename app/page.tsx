@@ -57,7 +57,7 @@ export default async function Home() {
       <div className="relative">
         <div className="flex w-full gap-3 overflow-x-auto pb-4 pt-2 scrollbar-hide snap-x snap-mandatory px-4 sm:px-0">
           {products.map((product) => (
-            <div key={product.id} className="min-w-[42%] sm:min-w-[30%] md:min-w-[25%] lg:min-w-[18%] snap-start">
+            <div key={product.id} className="min-w-[40%] sm:min-w-[28%] md:min-w-[22%] lg:min-w-[18%] snap-start">
               <ProductCard 
                 data={{
                   ...product,

@@ -4,28 +4,39 @@ import { notFound } from "next/navigation"
 
 export const revalidate = 0
 
+// Interface mise à jour pour Next.js 15
 interface CategoryPageProps {
-  params: {
-    categoryId: string
-  }
-  searchParams: {
+  params: Promise<{
+    id: string // Correspond au nom du dossier [id]
+  }>
+  searchParams: Promise<{
     color?: string
     size?: string
-  }
+  }>
 }
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
-  // Pour Next.js 15, il faudrait await params, mais pour 13/14 c'est direct
-  // const resolvedParams = await params; 
-  
+  // 1. On attend la résolution des promesses (Obligatoire en Next.js 15)
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+
+  const categoryId = resolvedParams.id;
+
+  // 2. Vérification de l'ID pour éviter l'erreur Prisma "needs at least one of id arguments"
+  if (!categoryId) {
+    return notFound();
+  }
+
   const category = await prisma.category.findUnique({
     where: {
-      id: params.categoryId
+      id: categoryId
     },
     include: {
       products: {
         where: {
           isArchived: false
+          // Vous pourriez ajouter ici les filtres de couleur/taille si besoin
+          // en utilisant resolvedSearchParams.color ou size
         },
         include: {
           images: true
@@ -64,10 +75,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                <ProductCard 
                  key={product.id} 
                  data={{
-                    ...product,
-                    // CORRECTION ICI : Conversion explicite Decimal -> Number
-                    price: product.price.toNumber(),
-                    originalPrice: product.originalPrice ? product.originalPrice.toNumber() : null
+                   ...product,
+                   // Conversion Decimal -> Number pour le composant Client ProductCard
+                   price: Number(product.price),
+                   originalPrice: product.originalPrice ? Number(product.originalPrice) : null
                  }} 
                />
              ))}
