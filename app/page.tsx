@@ -105,7 +105,7 @@ export default async function Home() {
                <img 
                  src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=800&q=80" 
                  alt="Hero" 
-                 className="h-64 w-full md:h-[500px] grayscale hover:grayscale-0 transition duration-700 object-cover"
+                 className="h-64 w-full md:h-[500px] object-cover"
                />
             </div>
           </div>
