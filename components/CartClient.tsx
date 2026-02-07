@@ -7,8 +7,8 @@ import { Trash2, ShoppingBag, ArrowRight, Minus, Plus } from 'lucide-react'
 import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { formatPrice } from '@/lib/currency' // <-- Import
 
-// --- DICTIONNAIRE DE COULEURS ---
 const colorMap: Record<string, string> = {
   'noir mat': '#171717', 'blanc pur': '#FFFFFF', 'gris chiné': '#9CA3AF',
   'anthracite': '#374151', 'bleu marine': '#1E3A8A', 'bleu roi': '#2563EB',
@@ -38,7 +38,7 @@ export default function CartClient() {
 
   const items = cart.items
 
-  // Calcul du total global
+  // Calcul du total global en EUR (pour logique interne)
   const grandTotal = items.reduce((total, item) => {
     return total + Number(item.price) * item.quantity
   }, 0)
@@ -50,8 +50,8 @@ export default function CartClient() {
         items: items.map(item => ({
             id: item.id,
             quantity: item.quantity,
-            size: item.selectedSize,
-            color: item.selectedColor
+            selectedSize: item.selectedSize,
+            selectedColor: item.selectedColor
         }))
       })
       window.location = response.data.url
@@ -71,13 +71,9 @@ export default function CartClient() {
     return c;
   }
 
-  // --- FONCTIONS DE MODIFICATION (Corrigées) ---
-  
   const onIncrease = (cartId: string) => {
-    // On trouve l'item grâce à son ID unique de panier
     const item = items.find(i => i.cartId === cartId);
     if (item) {
-        // On utilise la fonction updateQuantity qui existe dans ton store
         cart.updateQuantity(cartId, item.quantity + 1)
     }
   }
@@ -85,7 +81,6 @@ export default function CartClient() {
   const onDecrease = (cartId: string) => {
     const item = items.find(i => i.cartId === cartId);
     if (item) {
-        // Ton store gère déjà la suppression si qté <= 0, donc c'est parfait
         cart.updateQuantity(cartId, item.quantity - 1)
     }
   }
@@ -123,9 +118,8 @@ export default function CartClient() {
         <div className="lg:col-span-7">
           <ul className="divide-y divide-gray-200 border-t border-b border-gray-200">
             {items.map((item) => {
-               // item.cartId est unique, parfait pour la key
                const bg = getColorStyle(item.selectedColor || '');
-               const lineTotal = Number(item.price) * item.quantity; // Calcul du total de la ligne
+               const lineTotal = Number(item.price) * item.quantity; 
 
                return (
                 <li key={item.cartId} className="flex py-6 sm:py-10">
@@ -165,18 +159,16 @@ export default function CartClient() {
                                     )}
                                 </div>
                                 
-                                {/* PRIX UNITAIRE */}
+                                {/* PRIX UNITAIRE (Formaté FCFA) */}
                                 <p className="mt-2 text-xs text-gray-500">
-                                    Prix unitaire : {Number(item.price).toFixed(2)} €
+                                    Prix unitaire : {formatPrice(item.price)}
                                 </p>
                             </div>
 
                             {/* QUANTITÉ + TOTAL LIGNE + SUPPRESSION */}
                             <div className="mt-4 sm:mt-0 sm:pr-9 flex flex-col items-end gap-2">
-                                {/* Contrôle Quantité */}
                                 <div className="flex items-center border border-gray-300 rounded-md">
                                     <button 
-                                        // On utilise cartId ici !
                                         onClick={() => onDecrease(item.cartId)}
                                         className="p-2 hover:bg-gray-100 text-gray-600 transition"
                                     >
@@ -186,7 +178,6 @@ export default function CartClient() {
                                         {item.quantity}
                                     </span>
                                     <button 
-                                        // On utilise cartId ici !
                                         onClick={() => onIncrease(item.cartId)}
                                         className="p-2 hover:bg-gray-100 text-gray-600 transition"
                                     >
@@ -194,12 +185,11 @@ export default function CartClient() {
                                     </button>
                                 </div>
 
-                                {/* TOTAL LIGNE (Nouveau) */}
+                                {/* TOTAL LIGNE (Formaté FCFA) */}
                                 <p className="text-sm font-bold text-black">
-                                    Total: {lineTotal.toFixed(2)} €
+                                    Total: {formatPrice(lineTotal)}
                                 </p>
                                 
-                                {/* Bouton Supprimer */}
                                 <button
                                     onClick={() => onRemove(item.cartId)}
                                     className="absolute right-0 top-0 text-gray-400 hover:text-red-600 transition p-2 hover:bg-red-50 rounded-full"
@@ -224,7 +214,8 @@ export default function CartClient() {
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between border-t border-gray-200 pt-4">
               <div className="text-base font-medium text-gray-900">Total Global</div>
-              <div className="text-xl font-black text-gray-900">{grandTotal.toFixed(2)} €</div>
+              {/* AFFICHAGE TOTAL EN FCFA */}
+              <div className="text-xl font-black text-gray-900">{formatPrice(grandTotal)}</div>
             </div>
             
             <div className="flex items-center justify-between pt-2">

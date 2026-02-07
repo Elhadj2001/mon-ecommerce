@@ -5,11 +5,13 @@ import Image from 'next/image'
 import { Product } from '@prisma/client'
 import { useState, MouseEventHandler } from 'react'
 import { useCart } from '@/hooks/use-cart'
-import { ShoppingBag, Check } from 'lucide-react'
+import { ShoppingBag, Check, AlertCircle } from 'lucide-react'
+import { formatPrice } from '@/lib/currency' // <-- Import
 
-interface ProductWithImages extends Omit<Product, 'price' | 'originalPrice'> {
+interface ProductWithImages extends Omit<Product, 'price' | 'originalPrice' | 'stock'> {
   price: number
   originalPrice?: number | null
+  stock: number
   images: { url: string; color?: string | null }[]
 }
 
@@ -40,11 +42,14 @@ export default function ProductCard({ data }: ProductCardProps) {
   const sizes = data.sizes || []
   const colors = data.colors || []
 
-  // --- 1. SÉCURISATION DES VARIABLES ---
+  // --- LOGIQUE DE STOCK ---
+  const stock = Number(data.stock)
+  const isOutOfStock = stock === 0
+  const isLowStock = stock > 0 && stock <= 5
+  // ---------------------------
+
   const price = Number(data.price)
   const originalPrice = data.originalPrice ? Number(data.originalPrice) : null
-  
-  // La promo n'est valide QUE si l'ancien prix existe ET est plus grand que le prix actuel
   const hasPromo = originalPrice !== null && originalPrice > price
   
   const discountPercentage = hasPromo && originalPrice
@@ -69,13 +74,15 @@ export default function ProductCard({ data }: ProductCardProps) {
     e.preventDefault()
     e.stopPropagation()
 
+    if (isOutOfStock) return
+
     if (sizes.length > 0 && !size) return alert("⚠️ Veuillez sélectionner une taille.")
     if (colors.length > 0 && !color) return alert("⚠️ Veuillez sélectionner une couleur.")
 
     cart.addItem({
       id: data.id,
       name: data.name,
-      price: price,
+      price: price, // On garde le prix EUR dans le panier, la conversion se fera à l'affichage
       images: [currentImage || ''], 
       quantity: 1,
       selectedSize: size,
@@ -88,9 +95,18 @@ export default function ProductCard({ data }: ProductCardProps) {
       <Link href={`/products/${data.id}`} className="block relative overflow-hidden rounded-lg bg-gray-100 aspect-[3/4]">
         
         {/* BADGE PROMO */}
-        {hasPromo && discountPercentage > 0 && (
+        {!isOutOfStock && hasPromo && discountPercentage > 0 && (
             <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest z-10 rounded-sm shadow-sm">
                 -{discountPercentage}%
+            </div>
+        )}
+
+        {/* BADGE RUPTURE */}
+        {isOutOfStock && (
+            <div className="absolute inset-0 bg-white/60 z-20 flex items-center justify-center backdrop-blur-[1px]">
+                <span className="bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-widest">
+                    Épuisé
+                </span>
             </div>
         )}
 
@@ -99,45 +115,57 @@ export default function ProductCard({ data }: ProductCardProps) {
           alt={data.name}
           fill
           sizes="(max-width: 768px) 50vw, 25vw"
-          className="object-cover object-center transition-all duration-500 group-hover:scale-105"
+          className={`object-cover object-center transition-all duration-500 group-hover:scale-105 ${isOutOfStock ? 'grayscale opacity-50' : ''}`}
         />
         
-        <button 
-          onClick={handleAddToCart}
-          className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-md text-black hover:bg-black hover:text-white transition-all duration-200 z-20 active:scale-95"
-        >
-          <ShoppingBag size={18} />
-        </button>
+        {!isOutOfStock && (
+            <button 
+              onClick={handleAddToCart}
+              className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-md text-black hover:bg-black hover:text-white transition-all duration-200 z-20 active:scale-95 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
+            >
+              <ShoppingBag size={18} />
+            </button>
+        )}
       </Link>
 
       <div className="space-y-2 px-1">
         <div className="flex justify-between items-start gap-2">
-           <Link href={`/products/${data.id}`} className="font-bold text-xs sm:text-sm uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
-             {data.name}
-           </Link>
+           <div className="flex flex-col">
+               <Link href={`/products/${data.id}`} className="font-bold text-xs sm:text-sm uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
+                 {data.name}
+               </Link>
+
+               {/* ALERT STOCK FAIBLE */}
+               {isLowStock && (
+                   <div className="flex items-center gap-1 text-[10px] font-bold text-red-600 mt-1 animate-pulse">
+                       <AlertCircle size={10} />
+                       <span>Plus que {stock} !</span>
+                   </div>
+               )}
+           </div>
            
            <div className="flex flex-col items-end shrink-0">
-              {/* AFFICHAGE DES PRIX */}
-              {hasPromo && originalPrice ? (
-                  <>
-                      <span className="text-[10px] text-gray-400 line-through leading-none">
-                          {originalPrice.toFixed(2)}€
-                      </span>
-                      <span className="font-bold text-sm text-red-600">
-                          {price.toFixed(2)}€
-                      </span>
-                  </>
-              ) : (
-                  <span className="font-bold text-sm">
-                      {price.toFixed(2)}€
-                  </span>
-              )}
+             {/* PRIX FORMATÉS EN FCFA */}
+             {hasPromo && originalPrice ? (
+                 <>
+                     <span className="text-[10px] text-gray-400 line-through leading-none">
+                         {formatPrice(originalPrice)}
+                     </span>
+                     <span className="font-bold text-sm text-red-600">
+                         {formatPrice(price)}
+                     </span>
+                 </>
+             ) : (
+                 <span className="font-bold text-sm">
+                     {formatPrice(price)}
+                 </span>
+             )}
            </div>
         </div>
 
-        {/* SECTION TAILLES */}
+        {/* SECTION TAILLES ( inchangée ) */}
         {sizes.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
+          <div className={`flex flex-wrap gap-1.5 ${isOutOfStock ? 'opacity-30 pointer-events-none' : ''}`}>
             {sizes.map((s) => (
               <button
                 key={s}
@@ -155,25 +183,24 @@ export default function ProductCard({ data }: ProductCardProps) {
           </div>
         )}
 
-        {/* SECTION COULEURS */}
+        {/* SECTION COULEURS ( inchangée ) */}
         {colors.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className={`flex flex-wrap gap-1.5 pt-1 ${isOutOfStock ? 'opacity-30 pointer-events-none' : ''}`}>
             {colors.slice(0, 6).map((c) => {
                const bg = getColorStyle(c);
                const isLight = bg === '#FFFFFF' || bg === '#FDE68A';
                return (
                 <button
-                    key={c}
-                    onMouseEnter={() => handleColorHover(c)}
-                    onClick={(e) => { e.preventDefault(); setColor(c); handleColorHover(c); }}
-                    className={`w-5 h-5 rounded-full border border-gray-200 shadow-sm transition-transform flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
-                    style={{ backgroundColor: bg }} 
+                   key={c}
+                   onMouseEnter={() => handleColorHover(c)}
+                   onClick={(e) => { e.preventDefault(); setColor(c); handleColorHover(c); }}
+                   className={`w-5 h-5 rounded-full border border-gray-200 shadow-sm transition-transform flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
+                   style={{ backgroundColor: bg }} 
                 >
                     {color === c && <Check size={10} className={isLight ? 'text-black' : 'text-white'} />}
                 </button>
                )
             })}
-            {colors.length > 6 && <span className="text-[10px] text-gray-400 self-center">+{colors.length - 6}</span>}
           </div>
         )}
       </div>

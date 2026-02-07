@@ -9,19 +9,17 @@ import { toast } from "react-hot-toast"
 import { useRouter, useParams } from "next/navigation"
 import { Product, Image as ImageType, Category } from "@prisma/client"
 import ImageUpload from "@/components/admin/ImageUpload"
-import { Trash, Plus, RotateCcw, Check, Palette, X } from "lucide-react"
+import { Trash, Plus, RotateCcw, Check, Palette, X, Info } from "lucide-react"
 
-// --- SCHÉMA ZOD (Version Améliorée) ---
+// --- SCHÉMA ZOD ---
 const formSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   price: z.coerce.number().min(0.01, "Prix requis"),
-  // On garde les améliorations : originalPrice et gender
   originalPrice: z.coerce.number().optional(), 
   stock: z.coerce.number().min(0, "Stock minimum 0"),
   categoryId: z.string().min(1, "Catégorie requise"),
   gender: z.string().min(1, "Le genre est requis"), 
   description: z.string().min(1, "Description requise"),
-  // Validation stricte des images avec couleur
   images: z.object({ 
     url: z.string(), 
     color: z.string().optional().nullable() 
@@ -105,14 +103,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
     }
   })
 
-  // --- C'EST ICI QUE JE CORRIGE LE PROBLÈME ---
   const onSubmit: SubmitHandler<ProductFormValues> = async (data) => {
     try {
       setLoading(true)
       
       let finalCategoryId = data.categoryId;
       
-      // Si "Nouvelle Catégorie", on appelle l'API sans storeId
       if (isNewCategoryMode) {
           const res = await axios.post(`/api/categories`, { 
             name: data.categoryId 
@@ -123,11 +119,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
       const payload = { ...data, categoryId: finalCategoryId };
 
       if (initialData) {
-        // Modification : On utilise l'ID du produit (params.productId ou initialData.id)
         const productId = params.productId || initialData.id;
         await axios.patch(`/api/products/${productId}`, payload)
       } else {
-        // Création : URL simple sans storeId
         await axios.post(`/api/products`, payload)
       }
       
@@ -141,7 +135,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
       setLoading(false)
     }
   }
-  // ------------------------------------------
 
   const toggleSelection = (field: "sizes" | "colors", value: string) => {
     const current = form.getValues(field) || []
@@ -176,7 +169,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
             disabled={loading}
             onClick={async () => {
               setLoading(true); 
-              // Correction URL suppression aussi
               const productId = params.productId || initialData.id;
               await axios.delete(`/api/products/${productId}`); 
               router.refresh(); 
@@ -257,10 +249,17 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
           {/* GESTION DES PRIX */}
           <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Prix de vente (€)</label>
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1">
+                   Prix de vente (EUR) 
+                   {/* --- CORRECTION ICI : Wrapper l'icône dans un span pour le title --- */}
+                   <span title="Saisir en Euros. La conversion FCFA est auto.">
+                      <Info size={12} className="text-gray-400 cursor-help" />
+                   </span>
+                </label>
                 <div className="relative">
                     <input 
                         type="number" step="0.01"
+                        placeholder="Ex: 20 (soit ~13.000 F)"
                         className="w-full border border-gray-300 p-3 rounded-lg pl-8 focus:ring-2 focus:ring-black outline-none transition"
                         disabled={loading} {...form.register("price")} 
                     />
@@ -270,7 +269,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold uppercase tracking-wider text-gray-500">Prix d&apos;origine (Promo)</label>
+                <label className="text-sm font-bold uppercase tracking-wider text-gray-500">Prix Promo (EUR)</label>
                 <div className="relative">
                     <input 
                         type="number" step="0.01"
@@ -284,7 +283,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-              {/* STOCK */}
               <div className="space-y-2">
                 <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Stock</label>
                 <input 
@@ -294,7 +292,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                 />
               </div>
 
-              {/* GENRE (NOUVEAU) */}
               <div className="space-y-2">
                 <label className="text-sm font-bold uppercase tracking-wider text-gray-700">Genre (Cible)</label>
                 <select 
@@ -322,10 +319,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
           {form.formState.errors.description && <p className="text-red-500 text-sm">⚠️ Requis</p>}
         </div>
 
-        {/* SECTION VARIANTES */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-gray-100">
-            
-            {/* TAILLES (Maintenant Optionnelles) */}
             <div>
                 <label className="text-sm font-bold uppercase tracking-wider text-gray-700 block mb-3">
                     Tailles <span className="text-xs text-gray-400 font-normal lowercase">(optionnel)</span>
@@ -337,12 +331,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                             <div 
                                 key={size}
                                 onClick={() => toggleSelection("sizes", size)}
-                                className={`
-                                    w-12 h-12 flex items-center justify-center rounded-md cursor-pointer border transition-all font-semibold select-none
-                                    ${isSelected 
-                                        ? 'bg-black text-white border-black shadow-md scale-110' 
-                                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-50'}
-                                `}
+                                className={`w-12 h-12 flex items-center justify-center rounded-md cursor-pointer border transition-all font-semibold select-none ${isSelected ? 'bg-black text-white border-black shadow-md scale-110' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:bg-gray-50'}`}
                             >
                                 {size}
                             </div>
@@ -351,7 +340,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                 </div>
             </div>
 
-            {/* COULEURS */}
             <div>
                 <label className="text-sm font-bold uppercase tracking-wider text-gray-700 block mb-3 flex items-center gap-2">
                   <Palette size={16} /> Couleurs
@@ -366,21 +354,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                               <div 
                                   key={colorItem.name}
                                   onClick={() => toggleSelection("colors", colorItem.name)}
+                                  // --- Title est valide sur une div HTML standard ---
                                   title={colorItem.name}
-                                  className={`
-                                    w-10 h-10 rounded-full cursor-pointer border-2 transition-all shadow-sm flex items-center justify-center relative group
-                                    ${isSelected 
-                                      ? `ring-2 ring-offset-2 scale-110 ${isWhite ? 'ring-gray-300 border-gray-300' : 'ring-black border-transparent'}` 
-                                      : `hover:scale-105 ${isWhite ? 'border-gray-200' : 'border-transparent'}`}
-                                  `}
+                                  className={`w-10 h-10 rounded-full cursor-pointer border-2 transition-all shadow-sm flex items-center justify-center relative group ${isSelected ? `ring-2 ring-offset-2 scale-110 ${isWhite ? 'ring-gray-300 border-gray-300' : 'ring-black border-transparent'}` : `hover:scale-105 ${isWhite ? 'border-gray-200' : 'border-transparent'}`}`}
                                   style={{ backgroundColor: colorItem.hex }}
                               >
                                   {isSelected && (
                                     <Check size={16} className={isWhite ? "text-black" : "text-white"} />
                                   )}
-                                  <span className="absolute bottom-full mb-2 hidden group-hover:block bg-black text-white text-xs p-1 rounded whitespace-nowrap z-10">
-                                    {colorItem.name}
-                                  </span>
                               </div>
                           )
                       })}
@@ -392,7 +373,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                         value={customColorHex}
                         onChange={(e) => setCustomColorHex(e.target.value)}
                         className="w-10 h-10 rounded cursor-pointer border-none p-0"
-                        title="Choisir une couleur personnalisée"
                       />
                       <span className="text-sm font-mono text-gray-600">{customColorHex}</span>
                       <button
@@ -423,7 +403,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
             </div>
         </div>
 
-        {/* SECTION VISIBILITÉ */}
         <div className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
           <label className="flex items-center gap-3 cursor-pointer group">
             <div className="relative flex items-center">

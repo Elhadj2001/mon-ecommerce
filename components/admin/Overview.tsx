@@ -22,11 +22,14 @@ export default function Overview({ data }: OverviewProps) {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `${value}€`}
+          // On affiche juste la valeur (les millions de FCFA prennent de la place)
+          tickFormatter={(value) => `${value}`} 
         />
         <Tooltip 
             cursor={{fill: 'transparent'}}
             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+            // On peut formater l'infobulle pour afficher FCFA
+            formatter={(value) => [`${value} FCFA`, 'Ventes']}
         />
         <Bar dataKey="total" fill="#000000" radius={[4, 4, 0, 0]} />
       </BarChart>

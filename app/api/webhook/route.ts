@@ -2,17 +2,16 @@ import Stripe from 'stripe'
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { sendOrderEmail } from '@/lib/mail' // On garde ton import
+import { sendOrderEmail } from '@/lib/mail'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover', // Assure-toi d'avoir la bonne date ici (celle suggérée par VS Code)
+  apiVersion: '2025-12-15.clover',
   typescript: true,
 })
 
 export async function POST(req: Request) {
   const body = await req.text()
   
-  // Correction Next.js 15 (Tu avais bon !)
   const headersList = await headers()
   const signature = headersList.get('Stripe-Signature') as string
 
@@ -32,7 +31,6 @@ export async function POST(req: Request) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
     const email = session?.customer_details?.email
-
     const address = session?.customer_details?.address
     const addressString = [
         address?.line1,
@@ -45,46 +43,59 @@ export async function POST(req: Request) {
     const orderId = session?.metadata?.orderId
 
     if (orderId && email) {
-        // 1. Mise à jour commande (Statut payé + Infos client)
-        const order = await prisma.order.update({
-            where: { id: orderId },
-            data: { 
-                isPaid: true, 
-                address: addressString, 
-                phone: phone 
-            },
-            include: { 
-                orderItems: { 
-                    include: { product: true } 
-                } 
-            }
-        });
-
-        // 2. GESTION DES STOCKS (C'est la partie qui manquait !) 📉
-        // On boucle sur chaque article pour réduire le stock
-        for (const item of order.orderItems) {
-            await prisma.product.update({
-                where: { id: item.productId },
-                data: {
-                    stock: { 
-                        decrement: item.quantity 
-                    }
+        
+        try {
+            // --- TRANSACTION ATOMIQUE (Le cœur de la correction) ---
+            // On récupère d'abord la commande pour avoir les items
+            const orderWithItems = await prisma.order.findUnique({
+                where: { id: orderId },
+                include: { 
+                    orderItems: {
+                        include: { product: true }
+                    } 
                 }
             })
-        }
 
-        // 3. ENVOI DU MAIL AUTOMATIQUE 📧
-        // Calcul du total pour le mail (convertit Decimal en Number)
-        const total = order.orderItems.reduce((acc, item) => {
-            return acc + (Number(item.product.price) * item.quantity);
-        }, 0);
+            if (!orderWithItems) throw new Error("Order not found");
 
-        try {
+            // On lance la transaction : Tout réussit ou tout échoue.
+            await prisma.$transaction(async (tx) => {
+                
+                // 1. Marquer comme payé
+                await tx.order.update({
+                    where: { id: orderId },
+                    data: { 
+                        isPaid: true, 
+                        address: addressString, 
+                        phone: phone 
+                    },
+                });
+
+                // 2. Décrémenter le stock
+                for (const item of orderWithItems.orderItems) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: {
+                            stock: {
+                                decrement: item.quantity
+                            }
+                        }
+                    });
+                }
+            });
+            // --- FIN TRANSACTION ---
+
+            // 3. ENVOI EMAIL (En dehors de la transaction car si l'email échoue, on ne veut pas annuler la vente)
+            const total = orderWithItems.orderItems.reduce((acc, item) => {
+                return acc + (Number(item.product.price) * item.quantity);
+            }, 0);
+
             await sendOrderEmail(email, orderId, total);
-            console.log(`✅ Mail de confirmation envoyé à ${email}`);
-        } catch (emailError) {
-            console.error("⚠️ Erreur lors de l'envoi de l'email:", emailError);
-            // On ne bloque pas le webhook si l'email échoue, le paiement est déjà validé
+            console.log(`✅ Commande ${orderId} validée et stock mis à jour.`);
+
+        } catch (error) {
+            console.error("❌ Erreur critique lors du traitement webhook :", error);
+            return new NextResponse("Database/Stock Error", { status: 500 });
         }
     }
   }
