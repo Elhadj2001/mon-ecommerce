@@ -1,7 +1,8 @@
-'use client' // <--- C'est ici qu'on met le client
+'use client'
 
-import Link from 'next/link'
 import dynamic from 'next/dynamic'
+import { motion } from 'framer-motion'
+import { useCart } from '@/hooks/use-cart'
 
 // On déplace l'import dynamique ici, là où il est autorisé
 const CartCount = dynamic(() => import('./CartCount'), { 
@@ -10,13 +11,17 @@ const CartCount = dynamic(() => import('./CartCount'), {
 })
 
 export default function CartButton() {
+  const cart = useCart()
+
   return (
-    <Link 
-      href="/cart" 
-      className="flex items-center gap-x-2 rounded-full bg-black px-5 py-2 text-xs font-bold uppercase tracking-widest text-white hover:bg-gray-800 transition-all"
+    <motion.button 
+      onClick={() => cart.onOpen()}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className="flex items-center gap-x-2 rounded-full bg-foreground px-5 py-2 text-xs font-bold uppercase tracking-widest text-background hover:opacity-80 transition-opacity whitespace-nowrap"
     >
       <span>Panier</span>
       <CartCount />
-    </Link>
+    </motion.button>
   )
 }

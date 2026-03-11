@@ -73,7 +73,7 @@ export default function CategoryMenu({ categories }: CategoryMenuProps) {
                    {/* eslint-disable-next-line @next/next/no-img-element */}
                    <img 
                       src={activeMenu === 'Homme' 
-                        ? "https://images.unsplash.com/photo-1488161628813-994252600543?auto=format&fit=crop&w=500&q=80" 
+                        ? "https://media.istockphoto.com/id/2184365539/fr/photo/homme-%C3%A9l%C3%A9gant-en-costume-beige-posant-astucieusement-dans-une-lumi%C3%A8re-douce-sur-une-toile-de.webp?a=1&b=1&s=612x612&w=0&k=20&c=LZq-oycyrL5Zb8Fj8stm3M8lAhV1h89V9UF0FjEvBVY=" 
                         : "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=500&q=80"
                       }
                       alt={`Collection ${activeMenu}`}

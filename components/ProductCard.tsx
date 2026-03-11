@@ -6,7 +6,8 @@ import { Product } from '@prisma/client'
 import { useState, MouseEventHandler } from 'react'
 import { useCart } from '@/hooks/use-cart'
 import { ShoppingBag, Check, AlertCircle } from 'lucide-react'
-import { formatPrice } from '@/lib/currency' // <-- Import
+import { formatPrice } from '@/lib/currency'
+import { motion } from 'framer-motion'
 
 interface ProductWithImages extends Omit<Product, 'price' | 'originalPrice' | 'stock'> {
   price: number
@@ -91,20 +92,24 @@ export default function ProductCard({ data }: ProductCardProps) {
   }
 
   return (
-    <div className="group relative flex flex-col gap-2 h-full">
-      <Link href={`/products/${data.id}`} className="block relative overflow-hidden rounded-lg bg-gray-100 aspect-[3/4]">
+    <motion.div 
+      whileHover={{ y: -5 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="group relative flex flex-col gap-2 h-full"
+    >
+      <Link href={`/products/${data.id}`} className="block relative overflow-hidden rounded-lg bg-secondary aspect-[3/4] shadow-sm hover:shadow-md transition-shadow">
         
         {/* BADGE PROMO */}
         {!isOutOfStock && hasPromo && discountPercentage > 0 && (
-            <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest z-10 rounded-sm shadow-sm">
+            <div className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 uppercase tracking-widest z-10 rounded-sm shadow-sm">
                 -{discountPercentage}%
             </div>
         )}
 
         {/* BADGE RUPTURE */}
         {isOutOfStock && (
-            <div className="absolute inset-0 bg-white/60 z-20 flex items-center justify-center backdrop-blur-[1px]">
-                <span className="bg-black text-white px-3 py-1 text-xs font-bold uppercase tracking-widest">
+            <div className="absolute inset-0 bg-background/60 z-20 flex items-center justify-center backdrop-blur-[1px]">
+                <span className="bg-foreground text-background px-3 py-1 text-xs font-bold uppercase tracking-widest">
                     Épuisé
                 </span>
             </div>
@@ -121,7 +126,7 @@ export default function ProductCard({ data }: ProductCardProps) {
         {!isOutOfStock && (
             <button 
               onClick={handleAddToCart}
-              className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm p-2.5 rounded-full shadow-md text-black hover:bg-black hover:text-white transition-all duration-200 z-20 active:scale-95 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
+              className="absolute bottom-3 right-3 bg-background/90 backdrop-blur-sm p-2.5 rounded-full shadow-md text-foreground hover:bg-foreground hover:text-background border border-border transition-all duration-200 z-20 active:scale-95 translate-y-12 opacity-0 group-hover:translate-y-0 group-hover:opacity-100"
             >
               <ShoppingBag size={18} />
             </button>
@@ -131,13 +136,13 @@ export default function ProductCard({ data }: ProductCardProps) {
       <div className="space-y-2 px-1">
         <div className="flex justify-between items-start gap-2">
            <div className="flex flex-col">
-               <Link href={`/products/${data.id}`} className="font-bold text-xs sm:text-sm uppercase text-gray-900 line-clamp-1 hover:text-gray-600 transition-colors">
+               <Link href={`/products/${data.id}`} className="font-bold text-xs sm:text-sm uppercase text-foreground line-clamp-1 hover:text-muted-foreground transition-colors">
                  {data.name}
                </Link>
 
                {/* ALERT STOCK FAIBLE */}
                {isLowStock && (
-                   <div className="flex items-center gap-1 text-[10px] font-bold text-red-600 mt-1 animate-pulse">
+                   <div className="flex items-center gap-1 text-[10px] font-bold text-destructive mt-1 animate-pulse">
                        <AlertCircle size={10} />
                        <span>Plus que {stock} !</span>
                    </div>
@@ -148,15 +153,15 @@ export default function ProductCard({ data }: ProductCardProps) {
              {/* PRIX FORMATÉS EN FCFA */}
              {hasPromo && originalPrice ? (
                  <>
-                     <span className="text-[10px] text-gray-400 line-through leading-none">
+                     <span className="text-[10px] text-muted-foreground line-through leading-none">
                          {formatPrice(originalPrice)}
                      </span>
-                     <span className="font-bold text-sm text-red-600">
+                     <span className="font-bold text-sm text-destructive">
                          {formatPrice(price)}
                      </span>
                  </>
              ) : (
-                 <span className="font-bold text-sm">
+                 <span className="font-bold text-sm text-foreground">
                      {formatPrice(price)}
                  </span>
              )}
@@ -173,8 +178,8 @@ export default function ProductCard({ data }: ProductCardProps) {
                 className={`
                   text-[10px] px-2 py-0.5 border rounded transition-all uppercase font-medium
                   ${size === s 
-                    ? 'bg-black text-white border-black shadow-sm' 
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-black'}
+                    ? 'bg-foreground text-background border-foreground shadow-sm' 
+                    : 'bg-background text-muted-foreground border-border hover:border-foreground'}
                 `}
               >
                 {s}
@@ -194,7 +199,7 @@ export default function ProductCard({ data }: ProductCardProps) {
                    key={c}
                    onMouseEnter={() => handleColorHover(c)}
                    onClick={(e) => { e.preventDefault(); setColor(c); handleColorHover(c); }}
-                   className={`w-5 h-5 rounded-full border border-gray-200 shadow-sm transition-transform flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-black scale-110' : 'hover:scale-110'}`}
+                   className={`w-5 h-5 rounded-full border border-border shadow-sm transition-transform flex items-center justify-center ${color === c ? 'ring-1 ring-offset-1 ring-foreground scale-110' : 'hover:scale-110'}`}
                    style={{ backgroundColor: bg }} 
                 >
                     {color === c && <Check size={10} className={isLight ? 'text-black' : 'text-white'} />}
@@ -204,6 +209,6 @@ export default function ProductCard({ data }: ProductCardProps) {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }

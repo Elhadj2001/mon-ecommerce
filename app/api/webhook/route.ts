@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { sendOrderEmail } from '@/lib/mail'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
+  apiVersion: '2025-12-15.clover' as any, // Cast as any pour éviter erreur de version TS stricte
   typescript: true,
 })
 
@@ -25,15 +25,20 @@ export async function POST(req: Request) {
     )
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[WEBHOOK_ERROR] Signature invalide : ${errorMessage}`);
     return new NextResponse(`Webhook Error: ${errorMessage}`, { status: 400 })
   }
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const email = session?.customer_details?.email
+    
+    // --- CORRECTION MAJEURE : Récupération robuste de l'email ---
+    const email = session?.customer_details?.email || session?.customer_email;
+    
     const address = session?.customer_details?.address
     const addressString = [
         address?.line1,
+        address?.line2, // Ajout ligne 2 si existe
         address?.city,
         address?.country,
         address?.postal_code
@@ -42,11 +47,11 @@ export async function POST(req: Request) {
     const phone = session?.customer_details?.phone || ''
     const orderId = session?.metadata?.orderId
 
-    if (orderId && email) {
-        
+    if (orderId) {
         try {
-            // --- TRANSACTION ATOMIQUE (Le cœur de la correction) ---
-            // On récupère d'abord la commande pour avoir les items
+            console.log(`[WEBHOOK] Traitement commande ${orderId}`);
+
+            // 1. Récupération de la commande
             const orderWithItems = await prisma.order.findUnique({
                 where: { id: orderId },
                 include: { 
@@ -56,12 +61,15 @@ export async function POST(req: Request) {
                 }
             })
 
-            if (!orderWithItems) throw new Error("Order not found");
+            if (!orderWithItems) {
+                console.error(`[WEBHOOK] Commande ${orderId} introuvable en base.`);
+                // On retourne 200 pour dire à Stripe "J'ai reçu", sinon il va réessayer pendant 3 jours
+                return new NextResponse(null, { status: 200 }); 
+            }
 
-            // On lance la transaction : Tout réussit ou tout échoue.
+            // 2. TRANSACTION DB (Paiement + Stock)
             await prisma.$transaction(async (tx) => {
-                
-                // 1. Marquer comme payé
+                // Marquer comme payé
                 await tx.order.update({
                     where: { id: orderId },
                     data: { 
@@ -71,31 +79,39 @@ export async function POST(req: Request) {
                     },
                 });
 
-                // 2. Décrémenter le stock
+                // Décrémenter le stock
                 for (const item of orderWithItems.orderItems) {
                     await tx.product.update({
                         where: { id: item.productId },
                         data: {
-                            stock: {
-                                decrement: item.quantity
-                            }
+                            stock: { decrement: item.quantity }
                         }
                     });
                 }
             });
-            // --- FIN TRANSACTION ---
+            
+            console.log(`[WEBHOOK] ✅ DB mise à jour pour commande ${orderId}`);
 
-            // 3. ENVOI EMAIL (En dehors de la transaction car si l'email échoue, on ne veut pas annuler la vente)
-            const total = orderWithItems.orderItems.reduce((acc, item) => {
+            // 3. ENVOI EMAIL
+            // On calcule le total en EUROS (valeur DB)
+            const totalInEur = orderWithItems.orderItems.reduce((acc, item) => {
                 return acc + (Number(item.product.price) * item.quantity);
             }, 0);
 
-            await sendOrderEmail(email, orderId, total);
-            console.log(`✅ Commande ${orderId} validée et stock mis à jour.`);
+            if (email) {
+                const emailResult = await sendOrderEmail(email, orderId, totalInEur);
+                if (emailResult.success) {
+                    console.log(`[WEBHOOK] 📧 Email envoyé à ${email}`);
+                } else {
+                    console.error(`[WEBHOOK] ⚠️ Echec envoi email :`, emailResult.error);
+                }
+            } else {
+                console.warn(`[WEBHOOK] ⚠️ Pas d'email trouvé pour la commande ${orderId}`);
+            }
 
         } catch (error) {
-            console.error("❌ Erreur critique lors du traitement webhook :", error);
-            return new NextResponse("Database/Stock Error", { status: 500 });
+            console.error("[WEBHOOK] ❌ Erreur critique transaction/traitement :", error);
+            return new NextResponse("Internal Server Error", { status: 500 });
         }
     }
   }

@@ -15,6 +15,9 @@ export interface CartItem {
 
 interface CartStore {
   items: CartItem[]
+  isOpen: boolean
+  onOpen: () => void
+  onClose: () => void
   addItem: (data: Omit<CartItem, 'cartId'>) => void
   removeItem: (cartId: string) => void
   updateQuantity: (cartId: string, quantity: number) => void
@@ -25,6 +28,9 @@ export const useCart = create(
   persist<CartStore>(
     (set, get) => ({
       items: [],
+      isOpen: false,
+      onOpen: () => set({ isOpen: true }),
+      onClose: () => set({ isOpen: false }),
       
       addItem: (data) => {
         const currentItems = get().items
@@ -48,11 +54,13 @@ export const useCart = create(
           })
           toast.success("Produit ajouté au panier")
         }
+        
+        // Ouvrir le panier au moment de l'ajout
+        get().onOpen()
       },
 
       removeItem: (cartId) => {
         set({ items: get().items.filter((item) => item.cartId !== cartId) })
-        toast.error("Produit retiré")
       },
 
       updateQuantity: (cartId, quantity) => {
