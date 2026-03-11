@@ -8,6 +8,7 @@ import { useCart } from '@/hooks/use-cart'
 import { ShoppingBag, Check, AlertCircle } from 'lucide-react'
 import { formatPrice } from '@/lib/currency'
 import { motion } from 'framer-motion'
+import { WishlistButton } from '@/components/ui/WishlistButton'
 
 interface ProductWithImages extends Omit<Product, 'price' | 'originalPrice' | 'stock'> {
   price: number
@@ -131,6 +132,11 @@ export default function ProductCard({ data }: ProductCardProps) {
               <ShoppingBag size={18} />
             </button>
         )}
+
+        {/* BOUTON WISHLIST */}
+        <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <WishlistButton product={data} size="sm" />
+        </div>
       </Link>
 
       <div className="space-y-2 px-1">

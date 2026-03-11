@@ -2,9 +2,46 @@ import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import ProductClient from "@/components/product/ProductClient"
 import ProductCard from "@/components/ProductCard"
+import type { Metadata } from "next"
+import { Breadcrumb } from "@/components/ui/Breadcrumb"
+
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mon-ecommerce-rho.vercel.app'
 
 interface ProductPageProps {
   params: Promise<{ id: string }>
+}
+
+// --- SEO DYNAMIQUE ---
+export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
+  const { id } = await params
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { images: true, category: true }
+  })
+
+  if (!product) return { title: 'Produit introuvable' }
+
+  const imageUrl = product.images[0]?.url || ''
+  const title = `${product.name} — Monsoon`
+  const description = product.description?.slice(0, 160) || `Découvrez ${product.name} dans notre boutique.`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${BASE_URL}/products/${product.id}`,
+      images: imageUrl ? [{ url: imageUrl, width: 800, height: 800, alt: product.name }] : [],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: imageUrl ? [imageUrl] : [],
+    },
+  }
 }
 
 export default async function ProductPage({ params }: ProductPageProps) {
@@ -49,19 +86,26 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }
 
   return (
-    <div className="bg-white">
+    <div className="bg-background">
       <div className="flex flex-col gap-y-16 pb-20">
         
         {/* A. SECTION PRODUIT PRINCIPAL */}
         <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          {/* @ts-ignore : On ignore l'erreur de type stricte pour le passage des props */}
+          {/* Breadcrumb */}
+          <div className="mb-6">
+            <Breadcrumb items={[
+              { label: product.category.name, href: `/category/${product.category.id}` },
+              { label: product.name }
+            ]} />
+          </div>
+          {/* @ts-ignore */}
           <ProductClient product={serializedProduct} />
         </div>
 
         {/* B. SECTION "VOUS POURRIEZ AUSSI AIMER" */}
         {suggestedProducts.length > 0 && (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <hr className="my-10 border-gray-100" />
+            <hr className="my-10 border-border" />
             
             <div className="flex flex-col gap-y-8">
               <div className="flex flex-col gap-y-1">

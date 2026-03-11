@@ -1,63 +1,110 @@
 import { Resend } from 'resend';
-import { formatPrice } from '@/lib/currency'; // Assurez-vous d'avoir créé ce fichier à l'étape précédente
+import { formatPrice } from '@/lib/currency';
 
-// Initialisation sécurisée
 const resend = new Resend(process.env.RESEND_API_KEY || 're_missing_key');
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mon-ecommerce-rho.vercel.app';
 
 export const sendOrderEmail = async (
   email: string, 
   orderId: string, 
   totalAmountInEur: number
 ) => {
-  // Vérification basique
   if (!process.env.RESEND_API_KEY) {
-      console.error("[MAIL] Clé API Resend manquante.");
-      return { success: false, error: "Missing API Key" };
+    console.error("[MAIL] Clé API Resend manquante.");
+    return { success: false, error: "Missing API Key" };
   }
 
   try {
-    // Conversion et formatage pour l'email (Le client veut voir du FCFA)
-    // Si vous n'avez pas importé formatPrice, utilisez la ligne ci-dessous :
-    // const formattedPrice = new Intl.NumberFormat("fr-FR", { style: 'currency', currency: 'XOF' }).format(totalAmountInEur * 655.957);
     const formattedPrice = formatPrice(totalAmountInEur);
+    const shortId = orderId.substring(0, 8).toUpperCase();
+    const date = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const username = email.split('@')[0];
 
     const data = await resend.emails.send({
-      from: `Boutique <${FROM_EMAIL}>`,
+      from: `MONSOON Boutique <${FROM_EMAIL}>`,
       to: email,
-      subject: `Confirmation de commande #${orderId.substring(0, 8)} 🎉`,
+      subject: `✅ Commande confirmée #${shortId} — Merci !`,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; padding: 20px; border-radius: 8px;">
-          <h1 style="text-align: center; text-transform: uppercase; letter-spacing: 2px; color: #000;">MONSOON</h1>
-          
-          <p style="text-align: center; color: #555;">Merci pour votre achat !</p>
-          
-          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 0; font-size: 14px; color: #666;">Commande N°</p>
-            <p style="margin: 5px 0 0 0; font-weight: bold; font-size: 16px;">#${orderId}</p>
-          </div>
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+        <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
+            <tr><td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+                
+                <tr>
+                  <td style="background:#0a0a0a;padding:32px 40px;text-align:center;">
+                    <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:900;letter-spacing:6px;text-transform:uppercase;">MONSOON</h1>
+                    <p style="margin:8px 0 0;color:#a1a1aa;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Le style sans compromis</p>
+                  </td>
+                </tr>
 
-          <p>Votre commande a été validée avec succès et est en cours de préparation.</p>
-          
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-          
-          <div style="display: flex; justify-content: space-between; font-size: 18px;">
-            <span>Total réglé :</span>
-            <strong>${formattedPrice}</strong>
-          </div>
-          
-          <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                <tr>
+                  <td style="padding:40px;text-align:center;border-bottom:1px solid #f0f0f0;">
+                    <div style="width:64px;height:64px;background:#d1fae5;border-radius:50%;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:32px;">✅</div>
+                    <h2 style="margin:0 0 8px;color:#0a0a0a;font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">Commande confirmée !</h2>
+                    <p style="margin:0;color:#71717a;font-size:15px;">Merci pour votre achat, ${username} 🎉</p>
+                  </td>
+                </tr>
 
-          <p style="margin-top: 30px; font-size: 12px; color: #999; text-align: center;">
-            Ceci est un email automatique. Merci de ne pas répondre directement.<br/>
-            Retrouvez-nous sur <a href="#" style="color: #000; text-decoration: underline;">Instagram</a>.
-          </p>
-        </div>
+                <tr>
+                  <td style="padding:32px 40px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="background:#f9f9f9;border-radius:12px;padding:20px;">
+                          <table width="100%" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="padding:8px 0;border-bottom:1px solid #e4e4e7;vertical-align:top;">
+                                <div style="color:#71717a;font-size:11px;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:4px;">Référence commande</div>
+                                <div style="color:#0a0a0a;font-size:18px;font-weight:900;letter-spacing:4px;">#${shortId}</div>
+                              </td>
+                              <td style="text-align:right;padding:8px 0;border-bottom:1px solid #e4e4e7;vertical-align:top;">
+                                <div style="color:#71717a;font-size:11px;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:4px;">Date</div>
+                                <div style="color:#0a0a0a;font-size:14px;font-weight:600;">${date}</div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td colspan="2" style="padding-top:16px;">
+                                <div style="color:#71717a;font-size:11px;text-transform:uppercase;letter-spacing:2px;font-weight:700;margin-bottom:4px;">Total réglé</div>
+                                <div style="color:#0a0a0a;font-size:24px;font-weight:900;">${formattedPrice}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin:24px 0 8px;color:#3f3f46;font-size:14px;line-height:1.6;">
+                      Votre commande est en cours de préparation. Vous recevrez un email dès qu'elle sera expédiée.
+                    </p>
+
+                    <div style="text-align:center;margin-top:28px;">
+                      <a href="${APP_URL}/account/orders" style="display:inline-block;background:#0a0a0a;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:50px;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:2px;">
+                        Voir mes commandes →
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="background:#f9f9f9;padding:24px 40px;text-align:center;border-top:1px solid #f0f0f0;">
+                    <p style="margin:0 0 4px;font-size:12px;color:#a1a1aa;">Email envoyé automatiquement — merci de ne pas y répondre.</p>
+                    <p style="margin:0;font-size:11px;color:#d4d4d8;">© ${new Date().getFullYear()} MONSOON — Tous droits réservés</p>
+                  </td>
+                </tr>
+
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
       `
     });
 
     if (data.error) {
-        return { success: false, error: data.error };
+      return { success: false, error: data.error };
     }
 
     return { success: true, id: data.data?.id };

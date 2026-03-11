@@ -1,21 +1,41 @@
 import { prisma } from "@/lib/prisma"
 import ProductCard from "@/components/ProductCard"
 import { notFound } from "next/navigation"
+import type { Metadata } from "next"
+
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mon-ecommerce-rho.vercel.app'
 
 export const revalidate = 0
 
-// 1. On ajoute 'gender' et 'sort' aux paramètres attendus
 interface CategoryPageProps {
-  params: Promise<{
-    id: string
-  }>
-  searchParams: Promise<{
-    color?: string
-    size?: string
-    gender?: string // <-- AJOUT CRUCIAL
-    sort?: string
-  }>
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ color?: string; size?: string; gender?: string; sort?: string; page?: string }>
 }
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params
+  const category = await prisma.category.findUnique({ where: { id } })
+  if (!category) return { title: 'Catégorie introuvable' }
+
+  const title = `${category.name} — Monsoon`
+  const description = `Découvrez notre collection ${category.name}. Produits de qualité, livraison rapide.`
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `${BASE_URL}/category/${id}`,
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
+  }
+}
+
 
 export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
   // Résolution des promesses (Next.js 15)
