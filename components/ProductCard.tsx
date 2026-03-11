@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
+import { CustomImage } from '@/components/ui/CustomImage'
 import { Product } from '@prisma/client'
 import { useState, MouseEventHandler } from 'react'
 import { useCart } from '@/hooks/use-cart'
@@ -115,7 +115,7 @@ export default function ProductCard({ data }: ProductCardProps) {
             </div>
         )}
 
-        <Image
+        <CustomImage
           src={currentImage || '/placeholder.png'}
           alt={data.name}
           fill

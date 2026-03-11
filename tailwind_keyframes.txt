@@ -1,0 +1,1 @@
+/* globals.css -> On injectera ces utilitaires d'animation dans la configuration Tailwind */

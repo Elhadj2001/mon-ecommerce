@@ -20,7 +20,8 @@ export async function GET(req: Request) {
       },
       take: 8, // On limite pour la performance
       include: {
-        category: true
+        category: true,
+        images: true
       }
     });
 

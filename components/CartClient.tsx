@@ -1,7 +1,7 @@
 'use client'
 
 import { useCart } from '@/hooks/use-cart'
-import Image from 'next/image'
+import { CustomImage } from '@/components/ui/CustomImage'
 import Link from 'next/link'
 import { Trash2, ShoppingBag, ArrowRight, Minus, Plus } from 'lucide-react'
 import axios from 'axios'
@@ -125,7 +125,7 @@ export default function CartClient() {
                 <li key={item.cartId} className="flex py-6 sm:py-10">
                     {/* IMAGE */}
                     <div className="relative h-24 w-24 sm:h-32 sm:w-32 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100">
-                        <Image
+                        <CustomImage
                             src={item.images[0] || '/placeholder.png'}
                             alt={item.name}
                             fill

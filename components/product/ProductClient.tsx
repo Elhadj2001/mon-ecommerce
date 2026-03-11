@@ -2,14 +2,17 @@
 
 import { Product } from '@prisma/client'
 import { useState, useEffect } from 'react'
-import Image from 'next/image'
-import { Truck, ShieldCheck, ShoppingBag, Check, AlertCircle, XCircle } from 'lucide-react'
+import { CustomImage } from '@/components/ui/CustomImage'
+import { Truck, ShieldCheck, ShoppingBag, Check, AlertCircle, XCircle, ArrowRightLeft, Droplets } from 'lucide-react'
 import { useCart } from '@/hooks/use-cart'
-import { formatPrice } from '@/lib/currency' // <-- Import
+import { formatPrice } from '@/lib/currency'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 interface ProductClientProps {
   product: Product & {
     images: { url: string; color?: string | null }[]
+    category: { name: string }
   }
 }
 
@@ -36,7 +39,14 @@ export default function ProductClient({ product }: ProductClientProps) {
   const [mainImage, setMainImage] = useState(product.images[0]?.url)
   const cart = useCart()
 
-  // --- 1. LOGIQUE DE STOCK ---
+  // Initialisation automatique de la taille si uen seule taille dispo
+  useEffect(() => {
+    if (product.sizes.length === 1 && !selectedSize) {
+      setSelectedSize(product.sizes[0])
+    }
+  }, [product.sizes])
+
+  // --- LOGIQUE DE STOCK ---
   const stock = Number(product.stock)
   const isOutOfStock = stock === 0
   const isLowStock = stock > 0 && stock <= 5
@@ -67,54 +77,72 @@ export default function ProductClient({ product }: ProductClientProps) {
     cart.addItem({
       id: product.id,
       name: product.name,
-      price: Number(product.price), // On garde EUR pour le panier
+      price: Number(product.price),
       images: [mainImage], 
       quantity: 1,
       selectedSize: selectedSize,
       selectedColor: selectedColor
     })
+    
+    // Ouvre immédiatement le panier
+    cart.onOpen()
   }
 
   return (
-    <div className="bg-white">
+    <div className="bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         
-        <div className="lg:grid lg:grid-cols-12 lg:gap-x-12 items-start">
+        {/* LAYOUT 2 COLONNES AVEC STICKY RIGHT */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-x-12 xl:gap-x-16 items-start relative">
           
-          {/* GALERIE IMAGES */}
-          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4">
-            <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:max-h-[550px] scrollbar-hide py-2 md:py-0">
+          {/* COLONNE GAUCHE (SCROLLABLE) : GALERIE IMAGES */}
+          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4 lg:sticky lg:top-24">
+            {/* Miniatures */}
+            <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:max-h-[700px] scrollbar-hide py-2 md:py-0 w-full md:w-20 lg:w-24 shrink-0">
               {product.images.map((img) => (
-                <div 
+                <button 
                   key={img.url}
-                  onMouseEnter={() => setMainImage(img.url)}
                   onClick={() => setMainImage(img.url)}
                   className={`
-                    relative w-16 h-20 md:w-20 md:h-24 flex-shrink-0 rounded-lg overflow-hidden cursor-pointer border-2 transition-all
-                    ${mainImage === img.url ? 'border-black opacity-100' : 'border-transparent opacity-50 hover:opacity-100'}
+                    relative w-16 h-20 md:w-full md:h-24 lg:h-32 flex-shrink-0 rounded-lg overflow-hidden cursor-pointer border-2 transition-all
+                    ${mainImage === img.url ? 'border-foreground shadow-md ring-2 ring-foreground ring-offset-2' : 'border-transparent opacity-60 hover:opacity-100 bg-secondary'}
                   `}
                 >
-                  <img 
+                  <CustomImage 
                     src={img.url} 
                     alt="Miniature" 
-                    className={`object-cover w-full h-full bg-gray-50 ${isOutOfStock ? 'grayscale' : ''}`} 
+                    fill
+                    className={`object-cover ${isOutOfStock ? 'grayscale' : ''}`} 
                   />
-                </div>
+                </button>
               ))}
             </div>
 
-            <div className="relative bg-gray-50 rounded-2xl overflow-hidden flex-1 aspect-square md:aspect-[4/5] max-h-[550px] border border-gray-100 shadow-sm">
-              <Image 
-                src={mainImage || '/placeholder.png'}
-                alt={product.name}
-                fill
-                className={`object-contain p-4 transition-all duration-500 ${isOutOfStock ? 'grayscale opacity-75' : ''}`}
-                priority
-                sizes="(max-width: 768px) 100vw, 50vw"
-              />
+            {/* Image Principale animée */}
+            <div className="relative bg-secondary/50 rounded-2xl overflow-hidden flex-1 aspect-[4/5] min-h-[400px] md:min-h-[600px] lg:h-[700px] border border-border shadow-sm">
+              <AnimatePresence mode="wait">
+                  <motion.div
+                    key={mainImage}
+                    initial={{ opacity: 0, filter: 'blur(10px)', scale: 1.05 }}
+                    animate={{ opacity: 1, filter: 'blur(0px)', scale: 1 }}
+                    exit={{ opacity: 0, filter: 'blur(5px)', scale: 0.95 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    className="absolute inset-0"
+                  >
+                    <CustomImage 
+                        src={mainImage || '/placeholder.png'}
+                        alt={product.name}
+                        fill
+                        className={`object-cover p-2 md:p-4 ${isOutOfStock ? 'grayscale opacity-75' : ''}`}
+                        priority
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </motion.div>
+              </AnimatePresence>
+
               {isOutOfStock && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
-                   <span className="bg-black text-white px-6 py-3 text-lg font-bold uppercase tracking-[0.2em] transform -rotate-12 shadow-xl border-4 border-white">
+                <div className="absolute inset-0 flex items-center justify-center bg-background/40 backdrop-blur-[2px] z-10">
+                   <span className="bg-foreground text-background px-6 py-3 text-lg font-bold uppercase tracking-[0.2em] transform -rotate-6 shadow-2xl border-4 border-background">
                      Épuisé
                    </span>
                 </div>
@@ -122,89 +150,110 @@ export default function ProductClient({ product }: ProductClientProps) {
             </div>
           </div>
 
-          {/* DETAILS */}
-          <div className="mt-10 lg:mt-0 lg:col-span-5 flex flex-col h-full">
+          {/* COLONNE DROITE (STICKY) : INFOS, PRIX, SÉLECTEURS, BOUTON */}
+          <div className="mt-10 lg:mt-0 lg:col-span-5 flex flex-col h-full sticky top-24 pt-4 pb-20">
             <div className="flex-1">
-              <nav aria-label="Breadcrumb" className="mb-2">
-                 <span className="text-[10px] text-gray-400 uppercase tracking-[0.2em] font-bold">Premium Collection</span>
+              
+              {/* Fil d'ariane & Titre */}
+              <nav aria-label="Breadcrumb" className="mb-4">
+                 <span className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold">
+                     Collection • {product.gender} • {product.category?.name}
+                 </span>
               </nav>
 
-              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900 uppercase leading-tight">
+              <h1 className="text-3xl lg:text-4xl font-black tracking-tight text-foreground uppercase leading-[1.1]">
                 {product.name}
               </h1>
               
-              <div className="mt-4 flex items-center justify-between border-b border-gray-100 pb-4">
-                {/* PRIX FORMATÉ EN FCFA */}
-                <p className="text-3xl font-medium text-gray-900">{formatPrice(product.price)}</p>
+              {/* Prix & Badges */}
+              <div className="mt-4 flex flex-col items-start gap-4 border-b border-border pb-6">
+                <div className="flex items-center gap-4">
+                    {product.originalPrice ? (
+                       <div className="flex items-end gap-3">
+                           <span className="text-4xl font-black text-destructive">{formatPrice(Number(product.price))}</span>
+                           <span className="text-xl font-medium text-muted-foreground line-through mb-1">{formatPrice(Number(product.originalPrice))}</span>
+                       </div>
+                    ) : (
+                       <span className="text-4xl font-black text-foreground">{formatPrice(Number(product.price))}</span>
+                    )}
+                </div>
                 
                 {isOutOfStock ? (
-                    <span className="text-red-600 text-xs font-bold px-3 py-1 bg-red-50 rounded-full flex items-center gap-1.5 border border-red-100">
-                      <XCircle size={14} /> Rupture de stock
+                    <span className="text-destructive text-xs font-bold px-3 py-1 bg-destructive/10 rounded-full flex items-center gap-1.5 border border-destructive/20">
+                      <XCircle size={14} /> En rupture de stock
                     </span>
                 ) : isLowStock ? (
-                    <span className="text-orange-600 text-xs font-bold px-3 py-1 bg-orange-50 rounded-full flex items-center gap-1.5 border border-orange-100 animate-pulse">
-                      <AlertCircle size={14} /> Stock Faible : Plus que {stock} !
+                    <span className="text-amber-600 text-xs font-bold px-3 py-1 bg-amber-50 rounded-full flex items-center gap-1.5 border border-amber-200 animate-pulse">
+                      <AlertCircle size={14} /> Attention, presque épuisé ! Exclisivité ({stock} restants)
                     </span>
                 ) : (
-                    <span className="text-green-600 text-xs font-bold px-3 py-1 bg-green-50 rounded-full flex items-center gap-1.5 border border-green-100">
-                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> En stock
+                    <span className="text-emerald-600 text-xs font-bold px-3 py-1 bg-emerald-50 rounded-full flex items-center gap-1.5 border border-emerald-200">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Produit en stock
                     </span>
                 )}
               </div>
 
-              <div className="mt-6">
-                <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">Description</h3>
-                <div className="mt-3 text-sm text-gray-600 leading-relaxed italic">
-                  {product.description}
-                </div>
-              </div>
-
+              {/* Sélection des options */}
               <div className="mt-8 space-y-8">
+                
+                {/* Couleurs */}
                 {product.colors.length > 0 && (
-                  <div className={isOutOfStock ? 'opacity-50 pointer-events-none grayscale' : ''}>
-                    <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-4">Couleurs disponibles</h3>
-                    <div className="flex flex-wrap gap-3">
+                  <div className={isOutOfStock ? 'opacity-40 pointer-events-none grayscale' : ''}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xs font-black text-foreground uppercase tracking-widest">Couleur sélectionnée</h3>
+                        {selectedColor && <span className="text-xs text-muted-foreground capitalize font-medium">{selectedColor}</span>}
+                    </div>
+                    <div className="flex flex-wrap gap-4">
                       {product.colors.map((color) => {
                         const bg = getColorStyle(color);
                         const isLight = ['#FFFFFF', 'white', '#FDE68A', '#FBCFE8'].includes(bg.toUpperCase());
 
                         return (
-                          <button
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
                             key={color}
                             onClick={() => setSelectedColor(color)}
                             disabled={isOutOfStock}
-                            className={`h-10 w-10 rounded-full border-2 transition-all flex items-center justify-center ${
+                            className={`h-12 w-12 rounded-full border-2 transition-all flex items-center justify-center relative ${
                               selectedColor === color 
-                              ? 'border-black scale-110 shadow-lg' 
-                              : 'border-transparent hover:scale-105 shadow-sm'
+                              ? 'border-foreground ring-2 ring-foreground ring-offset-2' 
+                              : 'border-border hover:border-muted-foreground'
                             }`}
                             style={{ backgroundColor: bg }}
                             title={color}
+                            aria-label={`Sélectionner la couleur ${color}`}
                           >
                             {selectedColor === color && (
-                              <Check className={`h-5 w-5 ${isLight ? 'text-black' : 'text-white'}`} />
+                              <Check className={`h-6 w-6 absolute ${isLight ? 'text-black' : 'text-white'}`} />
                             )}
-                          </button>
+                          </motion.button>
                         )
                       })}
                     </div>
                   </div>
                 )}
 
+                {/* Tailles */}
                 {product.sizes.length > 0 && (
-                  <div className={isOutOfStock ? 'opacity-50 pointer-events-none grayscale' : ''}>
-                    <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest mb-4">Choisir la taille</h3>
-                    <div className="grid grid-cols-5 gap-2">
+                  <div className={isOutOfStock ? 'opacity-40 pointer-events-none grayscale' : ''}>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xs font-black text-foreground uppercase tracking-widest">Taille</h3>
+                        <button className="text-[10px] uppercase font-bold text-muted-foreground underline underline-offset-4 hover:text-foreground">Guide des tailles</button>
+                    </div>
+                    
+                    <div className="grid grid-cols-4 md:grid-cols-5 gap-3">
                       {product.sizes.map((size) => (
                         <button
                           key={size}
                           onClick={() => setSelectedSize(size)}
                           disabled={isOutOfStock}
-                          className={`py-2.5 text-xs font-bold uppercase rounded-lg border-2 transition-all ${
-                            selectedSize === size
-                              ? 'bg-black text-white border-black'
-                              : 'bg-white text-gray-900 border-gray-100 hover:border-gray-300'
-                          }`}
+                          className={`
+                            py-3 text-sm font-bold uppercase rounded-lg border-2 transition-all active:scale-95
+                            ${selectedSize === size
+                              ? 'bg-foreground text-background border-foreground shadow-[0_4px_14px_0_rgba(0,0,0,0.39)] ring-1 ring-offset-1 ring-foreground dark:shadow-none'
+                              : 'bg-background text-foreground border-border hover:border-foreground/50'}
+                          `}
                         >
                           {size}
                         </button>
@@ -213,42 +262,100 @@ export default function ProductClient({ product }: ProductClientProps) {
                   </div>
                 )}
 
-                <button
+                {/* Bouton d'ajout */}
+                <motion.button
+                  whileHover={!isOutOfStock ? { scale: 1.01, y: -2 } : {}}
+                  whileTap={!isOutOfStock ? { scale: 0.98 } : {}}
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
                   className={`
-                    flex w-full items-center justify-center rounded-xl px-8 py-4 text-base font-bold transition-all shadow-2xl
+                    flex w-full items-center justify-center rounded-2xl px-8 py-5 text-lg font-black transition-all shadow-xl uppercase tracking-widest overflow-hidden relative group
                     ${isOutOfStock 
-                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed shadow-none'
-                        : 'bg-black text-white hover:bg-gray-800 active:scale-[0.98]'
+                        ? 'bg-secondary text-muted-foreground cursor-not-allowed shadow-none'
+                        : 'bg-foreground text-background hover:bg-foreground/90'
                     }
                   `}
                 >
+                  {/* Effet brillant sur le bouton */}
+                  {!isOutOfStock && (
+                      <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                  )}
+
                   {isOutOfStock ? (
                       <>
                         <XCircle className="mr-3 h-5 w-5" />
-                        Produit Épuisé
+                        Épuisé
                       </>
                   ) : (
                       <>
-                        <ShoppingBag className="mr-3 h-5 w-5" />
-                        Ajouter au panier
+                        <ShoppingBag className="mr-3 h-6 w-6 relative z-10" />
+                        <span className="relative z-10">Ajouter au panier</span>
                       </>
                   )}
-                </button>
+                </motion.button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mt-10 pt-6 border-t border-gray-100">
-                <div className="flex items-center gap-3 text-gray-500">
-                    <div className="p-2 bg-gray-50 rounded-lg text-black"><Truck size={18} /></div>
-                    <span className="text-[10px] leading-tight font-bold uppercase tracking-tighter">Livraison Express<br/><span className="text-gray-400 font-medium tracking-normal">Sous 48h</span></span>
+            {/* INFORMATIONS EN ACCORDÉONS (Radix UI) */}
+            <div className="mt-12 w-full">
+               <Accordion type="single" collapsible className="w-full" defaultValue="description">
+                 <AccordionItem value="description">
+                    <AccordionTrigger>Détails du produit</AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground leading-relaxed">
+                        {product.description}
+                    </AccordionContent>
+                 </AccordionItem>
+                 <AccordionItem value="delivery">
+                    <AccordionTrigger>Livraison & Retours</AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-4">
+                        <div className="flex items-start gap-4">
+                            <Truck className="w-5 h-5 mt-1 shrink-0 text-foreground" />
+                            <p className="text-muted-foreground leading-relaxed">
+                                Livraison standard gratuite sous 3-5 jours ouvrables. Livraison express disponible lors du paiement (24-48h).
+                            </p>
+                        </div>
+                        <div className="flex items-start gap-4">
+                            <ArrowRightLeft className="w-5 h-5 mt-1 shrink-0 text-foreground" />
+                            <p className="text-muted-foreground leading-relaxed">
+                                Retours gratuits sous 30 jours, dans l'emballage d'origine. Les étiquettes ne doivent pas avoir été retirées.
+                            </p>
+                        </div>
+                    </AccordionContent>
+                 </AccordionItem>
+                 <AccordionItem value="care">
+                    <AccordionTrigger>Composition & Entretien</AccordionTrigger>
+                    <AccordionContent className="flex flex-col gap-4">
+                        <div className="flex items-start gap-4">
+                            <Droplets className="w-5 h-5 mt-1 shrink-0 text-foreground" />
+                            <ul className="text-muted-foreground leading-relaxed list-disc list-inside space-y-2">
+                                <li>Lavage en machine à froid (30° maximum)</li>
+                                <li>Ne pas blanchir, Laver les couleurs foncées séparément</li>
+                                <li>Ne pas sécher en machine. Repassage doux à l'envers.</li>
+                            </ul>
+                        </div>
+                    </AccordionContent>
+                 </AccordionItem>
+               </Accordion>
+            </div>
+            
+            {/* Badges de réassurance */}
+            <div className="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-border">
+                <div className="flex flex-col items-center justify-center p-4 bg-secondary/50 rounded-xl text-center">
+                    <ShieldCheck size={28} className="text-foreground mb-2" />
+                    <span className="text-[10px] leading-tight font-black uppercase tracking-widest text-foreground">
+                        Paiement 100% Sécurisé<br/>
+                        <span className="text-muted-foreground font-medium tracking-normal normal-case">Stripe & SSL</span>
+                    </span>
                 </div>
-                <div className="flex items-center gap-3 text-gray-500">
-                    <div className="p-2 bg-gray-50 rounded-lg text-black"><ShieldCheck size={18} /></div>
-                    <span className="text-[10px] leading-tight font-bold uppercase tracking-tighter">Paiement Sécurisé<br/><span className="text-gray-400 font-medium tracking-normal">Certifié SSL</span></span>
+                <div className="flex flex-col items-center justify-center p-4 bg-secondary/50 rounded-xl text-center">
+                    <Truck size={28} className="text-foreground mb-2" />
+                    <span className="text-[10px] leading-tight font-black uppercase tracking-widest text-foreground">
+                        Expédition Rapide<br/>
+                        <span className="text-muted-foreground font-medium tracking-normal normal-case">Partout dans le monde</span>
+                    </span>
                 </div>
             </div>
+
           </div>
         </div>
       </div>

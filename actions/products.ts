@@ -3,49 +3,111 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { productSchema, ProductFormValues } from '@/lib/validations/product'
 
-export interface ProductImageInput {
-  url: string
-  color?: string
+export interface GetProductsParams {
+  categoryId?: string
+  isFeatured?: boolean
+  gender?: string
+  search?: string
+  take?: number
+  sizes?: string[]
+  colors?: string[]
 }
 
-// 1. AJOUT DES CHAMPS MANQUANTS DANS L'INTERFACE
-interface ProductFormValues {
-  name: string
-  description: string
-  price: number
-  originalPrice?: number | null // <--- AJOUTÉ
-  stock: number
-  categoryId: string
-  gender: string // <--- AJOUTÉ (Important pour tes filtres)
-  images: ProductImageInput[]
-  sizes: string[]
-  colors: string[]
-  isFeatured: boolean
+export async function getProducts(params: GetProductsParams = {}) {
+  try {
+    const { categoryId, isFeatured, gender, search, take, sizes, colors } = params
+
+    const whereClause: any = {
+      isArchived: false,
+    }
+
+    if (categoryId) whereClause.categoryId = categoryId
+    if (isFeatured !== undefined) whereClause.isFeatured = isFeatured
+    if (gender) whereClause.gender = gender
+
+    if (sizes && sizes.length > 0) {
+      whereClause.sizes = { hasSome: sizes }
+    }
+
+    if (colors && colors.length > 0) {
+      whereClause.colors = { hasSome: colors }
+    }
+
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { category: { name: { contains: search, mode: "insensitive" } } }
+      ]
+    }
+
+    const products = await prisma.product.findMany({
+      where: whereClause,
+      include: {
+        images: true,
+        category: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: take || undefined
+    })
+
+    return products
+  } catch (error) {
+    console.error("[GET_PRODUCTS]", error)
+    throw new Error("Erreur lors de la récupération des produits")
+  }
+}
+
+export async function getProduct(id: string) {
+  try {
+    if (!id) return null
+
+    const product = await prisma.product.findUnique({
+      where: {
+        id,
+        isArchived: false
+      },
+      include: {
+        images: true,
+        category: true,
+      }
+    })
+
+    return product
+  } catch (error) {
+    console.error("[GET_PRODUCT]", error)
+    return null
+  }
 }
 
 export async function createProduct(formData: ProductFormValues) {
   try {
-    if (!formData.name || !formData.price || !formData.categoryId || formData.images.length === 0) {
-      throw new Error("Champs obligatoires manquants")
+    // 1. Validation de sécurité Zod côté serveur
+    const validatedData = productSchema.parse(formData)
+
+    if (validatedData.images.length === 0) {
+      throw new Error("Au moins une image est requise")
     }
 
     await prisma.product.create({
       data: {
-        name: formData.name,
-        description: formData.description,
-        price: formData.price,
-        // 2. SAUVEGARDE DU PRIX PROMO
-        originalPrice: formData.originalPrice || null,
-        stock: formData.stock,
-        categoryId: formData.categoryId,
-        // 3. SAUVEGARDE DU GENRE
-        gender: formData.gender || "Unisexe",
-        isFeatured: formData.isFeatured,
-        sizes: formData.sizes,
-        colors: formData.colors,
+        name: validatedData.name,
+        description: validatedData.description,
+        price: validatedData.price,
+        originalPrice: validatedData.originalPrice || null,
+        stock: validatedData.stock,
+        categoryId: validatedData.categoryId,
+        gender: validatedData.gender,
+        isFeatured: validatedData.isFeatured,
+        isArchived: validatedData.isArchived,
+        sizes: validatedData.sizes,
+        colors: validatedData.colors,
         images: {
-          create: formData.images.map((img) => ({
+          create: validatedData.images.map((img: any) => ({
             url: img.url,
             color: img.color || null
           }))
@@ -58,6 +120,7 @@ export async function createProduct(formData: ProductFormValues) {
     
   } catch (error) {
     console.error('Erreur création produit:', error)
+    throw new Error("Données invalides")
   }
   
   redirect('/admin/products')
@@ -65,33 +128,33 @@ export async function createProduct(formData: ProductFormValues) {
 
 export async function updateProduct(productId: string, formData: ProductFormValues) {
   try {
-    // 1. Mise à jour des infos simples
+    // 1. Validation de sécurité Zod côté serveur
+    const validatedData = productSchema.parse(formData)
+
     await prisma.product.update({
       where: { id: productId },
       data: {
-        name: formData.name,
-        description: formData.description,
-        price: formData.price,
-        // 4. MISE À JOUR DU PRIX PROMO
-        originalPrice: formData.originalPrice || null,
-        stock: formData.stock,
-        categoryId: formData.categoryId,
-        // 5. MISE À JOUR DU GENRE
-        gender: formData.gender, 
-        isFeatured: formData.isFeatured,
-        sizes: formData.sizes,
-        colors: formData.colors,
+        name: validatedData.name,
+        description: validatedData.description,
+        price: validatedData.price,
+        originalPrice: validatedData.originalPrice || null,
+        stock: validatedData.stock,
+        categoryId: validatedData.categoryId,
+        gender: validatedData.gender, 
+        isFeatured: validatedData.isFeatured,
+        isArchived: validatedData.isArchived,
+        sizes: validatedData.sizes,
+        colors: validatedData.colors,
       }
     })
 
-    // 2. Gestion des Images (Suppression + Recréation)
     await prisma.image.deleteMany({
       where: { productId: productId }
     })
 
-    if (formData.images && formData.images.length > 0) {
+    if (validatedData.images && validatedData.images.length > 0) {
       await prisma.image.createMany({
-        data: formData.images.map((img) => ({
+        data: validatedData.images.map((img: any) => ({
           productId: productId,
           url: img.url,
           color: img.color || null
@@ -104,6 +167,7 @@ export async function updateProduct(productId: string, formData: ProductFormValu
     
   } catch (error) {
     console.error('Erreur modification produit:', error)
+    throw new Error("Données invalides")
   }
   
   redirect('/admin/products')
@@ -122,5 +186,6 @@ export async function deleteProduct(formData: FormData) {
     revalidatePath('/admin/products')
   } catch (error) {
     console.error('Erreur suppression produit:', error)
+    throw new Error("Erreur serveur")
   }
 }

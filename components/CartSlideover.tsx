@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useCart } from "@/hooks/use-cart"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, ShoppingBag, Plus, Minus, Trash2 } from "lucide-react"
-import Image from "next/image"
+import { CustomImage } from "@/components/ui/CustomImage"
 import { formatPrice } from "@/lib/currency"
 import { useRouter } from "next/navigation"
 
@@ -125,7 +125,7 @@ export function CartSlideover() {
                       <li key={item.cartId} className="flex gap-4">
                         {/* Image produit */}
                         <div className="relative w-24 h-24 rounded-md overflow-hidden bg-secondary border border-border flex-shrink-0">
-                          <Image
+                          <CustomImage
                             src={item.images[0] || '/placeholder.png'}
                             alt={item.name}
                             fill
