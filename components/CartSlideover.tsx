@@ -77,14 +77,16 @@ export function CartSlideover() {
             aria-hidden="true"
           />
 
-          {/* Panneau latéral */}
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-background border-l border-border shadow-2xl flex flex-col"
-          >
+          {/* Conteneur global masquant le débordement */}
+          <div className="fixed inset-0 overflow-hidden pointer-events-none z-50">
+            {/* Panneau latéral */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute inset-y-0 right-0 w-full max-w-md bg-background border-l border-border shadow-2xl flex flex-col pointer-events-auto"
+            >
             {/* Header du Slideover */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-2">
@@ -219,7 +221,8 @@ export function CartSlideover() {
                 </div>
               </div>
             )}
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
