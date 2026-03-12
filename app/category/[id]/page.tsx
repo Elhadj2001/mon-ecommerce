@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const category = await prisma.category.findUnique({ where: { id } })
   if (!category) return { title: 'Catégorie introuvable' }
 
-  const title = `${category.name} — Monsoon`
+  const title = `${category.name} — Maison Niang`
   const description = `Découvrez notre collection ${category.name}. Produits de qualité, livraison rapide.`
 
   return {

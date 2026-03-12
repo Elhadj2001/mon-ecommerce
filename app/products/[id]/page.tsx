@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   if (!product) return { title: 'Produit introuvable' }
 
   const imageUrl = product.images[0]?.url || ''
-  const title = `${product.name} — Monsoon`
+  const title = `${product.name} — Maison Niang`
   const description = product.description?.slice(0, 160) || `Découvrez ${product.name} dans notre boutique.`
 
   return {

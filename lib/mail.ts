@@ -22,7 +22,8 @@ export const sendOrderEmail = async (
     const username = email.split('@')[0];
 
     const data = await resend.emails.send({
-      from: `MONSOON Boutique <${FROM_EMAIL}>`,
+      from: `MAISON NIANG Boutique <${FROM_EMAIL}>`,
+      replyTo: 'eniang68@gmail.com',
       to: email,
       subject: `✅ Commande confirmée #${shortId} — Merci !`,
       html: `
@@ -36,8 +37,8 @@ export const sendOrderEmail = async (
                 
                 <tr>
                   <td style="background:#0a0a0a;padding:32px 40px;text-align:center;">
-                    <h1 style="margin:0;color:#ffffff;font-size:28px;font-weight:900;letter-spacing:6px;text-transform:uppercase;">MONSOON</h1>
-                    <p style="margin:8px 0 0;color:#a1a1aa;font-size:11px;letter-spacing:3px;text-transform:uppercase;">Le style sans compromis</p>
+                    <h1 style="margin:0;color:#ffffff;font-size:24px;font-weight:900;letter-spacing:4px;text-transform:uppercase;">MAISON NIANG</h1>
+                    <p style="margin:8px 0 0;color:#c9a84c;font-size:10px;letter-spacing:3px;text-transform:uppercase;">Saint-Louis · Paris — L'élégance sans compromis</p>
                   </td>
                 </tr>
 
@@ -91,7 +92,7 @@ export const sendOrderEmail = async (
                 <tr>
                   <td style="background:#f9f9f9;padding:24px 40px;text-align:center;border-top:1px solid #f0f0f0;">
                     <p style="margin:0 0 4px;font-size:12px;color:#a1a1aa;">Email envoyé automatiquement — merci de ne pas y répondre.</p>
-                    <p style="margin:0;font-size:11px;color:#d4d4d8;">© ${new Date().getFullYear()} MONSOON — Tous droits réservés</p>
+                    <p style="margin:0;font-size:11px;color:#d4d4d8;">© ${new Date().getFullYear()} MAISON NIANG — Tous droits réservés</p>
                   </td>
                 </tr>
 

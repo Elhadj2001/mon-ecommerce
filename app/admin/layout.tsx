@@ -2,11 +2,15 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, ShoppingBag, ArrowLeft, BarChart3 } from 'lucide-react'
+import {
+  LayoutDashboard, Package, ShoppingBag, ArrowLeft,
+  TrendingUp, Settings, BellRing, ChevronRight
+} from 'lucide-react'
 import { UserButton } from '@clerk/nextjs'
+import { motion } from 'framer-motion'
 
-const navLinks = [
-  { href: '/admin', label: 'Tableau de bord', icon: LayoutDashboard, exact: true },
+const NAV_LINKS = [
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/products', label: 'Produits', icon: Package },
   { href: '/admin/orders', label: 'Commandes', icon: ShoppingBag },
 ]
@@ -15,55 +19,86 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname()
 
   return (
-    <div className="flex min-h-screen bg-secondary/30">
-      
-      {/* Sidebar */}
-      <aside className="w-64 bg-background border-r border-border flex flex-col shrink-0">
-        
-        {/* Logo / En-tête */}
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-foreground rounded-xl flex items-center justify-center flex-shrink-0">
-              <BarChart3 className="w-5 h-5 text-background" />
-            </div>
-            <div>
-              <h2 className="text-sm font-black uppercase tracking-widest text-foreground">Admin Panel</h2>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Gestionnaire</p>
-            </div>
-          </div>
+    <div className="flex min-h-screen bg-[#f8f8f8] dark:bg-[#0d0d0f]">
+
+      {/* ══════════════════════════════════════
+          SIDEBAR PREMIUM
+      ══════════════════════════════════════ */}
+      <aside className="w-64 bg-[#09090b] flex flex-col shrink-0 relative overflow-hidden">
+
+        {/* Décoration fond sidebar */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full opacity-10"
+            style={{ background: 'radial-gradient(circle, #c9a84c, transparent)' }} />
+          <div className="absolute bottom-0 left-0 right-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent)' }} />
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          {navLinks.map((link) => {
+        {/* ── Logo / Brand ── */}
+        <div className="relative p-6 border-b border-white/[0.06]">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 bg-[#c9a84c] flex items-center justify-center shrink-0 rounded-sm">
+              <TrendingUp className="w-4 h-4 text-[#09090b]" />
+            </div>
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-tight text-white leading-none">
+                Maison Niang
+              </h2>
+              <p className="text-[9px] tracking-[0.25em] text-[#c9a84c] uppercase mt-0.5">
+                Admin
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        {/* ── Navigation ── */}
+        <nav className="flex-1 p-3 space-y-0.5">
+          <p className="text-[9px] tracking-[0.35em] text-white/20 uppercase px-3 pt-3 pb-2">
+            Navigation
+          </p>
+          {NAV_LINKS.map((link) => {
             const Icon = link.icon
-            const isActive = link.exact ? pathname === link.href : pathname.startsWith(link.href)
+            const isActive = link.exact
+              ? pathname === link.href
+              : pathname.startsWith(link.href)
+
             return (
               <Link
                 key={link.href}
                 href={link.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                  isActive
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
-                }`}
+                className={`
+                  relative flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold
+                  transition-all duration-200 group
+                  ${isActive
+                    ? 'bg-[#c9a84c] text-[#09090b]'
+                    : 'text-white/50 hover:text-white hover:bg-white/[0.06]'
+                  }
+                `}
               >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                {link.label}
+                <span className="flex items-center gap-3">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {link.label}
+                </span>
+                {isActive && <ChevronRight className="w-3 h-3 opacity-70" />}
               </Link>
             )
           })}
         </nav>
 
-        {/* Bas de sidebar */}
-        <div className="p-4 border-t border-border space-y-2">
-          <div className="flex items-center gap-3 px-3 py-2">
+        {/* ── Bottom ── */}
+        <div className="relative p-3 border-t border-white/[0.06] space-y-1">
+          {/* Profil utilisateur */}
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.06] transition-colors">
             <UserButton afterSignOutUrl="/" />
-            <span className="text-xs text-muted-foreground font-medium">Mon compte</span>
+            <div>
+              <p className="text-xs text-white/80 font-semibold">Mon compte</p>
+              <p className="text-[9px] text-white/30 tracking-wider">Administrateur</p>
+            </div>
           </div>
+
           <Link
             href="/"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/40 hover:text-white hover:bg-white/[0.06] transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
             Retour au site
@@ -71,10 +106,53 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Contenu Principal */}
-      <main className="flex-1 p-8 overflow-auto">
-        {children}
-      </main>
+      {/* ══════════════════════════════════════
+          CONTENU PRINCIPAL
+      ══════════════════════════════════════ */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+
+        {/* ── Top Bar ── */}
+        <header className="h-14 bg-white dark:bg-[#111113] border-b border-border flex items-center justify-between px-6 shrink-0">
+          {/* Breadcrumb / titre */}
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="font-bold text-foreground">Maison Niang</span>
+            <ChevronRight className="w-3 h-3" />
+            <span className="capitalize">
+              {pathname === '/admin'
+                ? 'Dashboard'
+                : pathname.split('/').filter(Boolean).slice(1).join(' › ')}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Indicateur en direct */}
+            <div className="hidden sm:flex items-center gap-1.5 text-[10px] text-emerald-500 font-bold uppercase tracking-widest">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              En ligne
+            </div>
+
+            {/* Lien nouveau produit rapide */}
+            <Link
+              href="/admin/products/new"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-[#c9a84c] text-[#09090b] text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-md hover:bg-[#f0d080] transition-colors"
+            >
+              + Produit
+            </Link>
+          </div>
+        </header>
+
+        {/* ── Page Content ── */}
+        <main className="flex-1 overflow-auto p-6 lg:p-8">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {children}
+          </motion.div>
+        </main>
+      </div>
     </div>
   )
-}
+}

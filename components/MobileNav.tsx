@@ -43,7 +43,7 @@ export default function MobileNav({ categories }: MobileNavProps) {
         
         {/* 1. EN-TÊTE DU MENU */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100 flex-shrink-0">
-           <span className="text-xl font-black uppercase tracking-tighter">Monsoon</span>
+           <span className="text-xl font-black uppercase tracking-tighter">Maison Niang</span>
            <button onClick={toggleMenu} className="p-2 text-gray-500 hover:text-black">
              <X size={24} />
            </button>
