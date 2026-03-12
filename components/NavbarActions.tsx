@@ -22,14 +22,16 @@ export default function NavbarActions() {
   const wishlistCount = wishlist.items.length
 
   return (
-    <div className="flex items-center gap-x-2 md:gap-x-4">
+    <div className="flex items-center gap-x-1 sm:gap-x-2 md:gap-x-4">
         <CommandMenu />
-        <ThemeToggle />
+        <div className="hidden sm:block">
+          <ThemeToggle />
+        </div>
 
-        {/* Bouton Wishlist */}
+        {/* Bouton Wishlist - Masqué sur mobile par défaut pour gain de place */}
         <Link
           href="/wishlist"
-          className="relative w-9 h-9 flex items-center justify-center rounded-xl border border-border bg-background hover:bg-secondary transition-all"
+          className="relative hidden sm:flex w-9 h-9 items-center justify-center rounded-xl border border-border bg-background hover:bg-secondary transition-all"
           aria-label="Mes favoris"
         >
           <Heart className="w-4 h-4 text-foreground" />

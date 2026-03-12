@@ -55,7 +55,7 @@ export default function NavbarClient({ categories }: NavbarClientProps) {
             </div>
 
             <Link href="/" className="flex flex-col leading-none group">
-              <span className="text-[1.15rem] font-black tracking-[-0.03em] uppercase text-foreground group-hover:text-[#c9a84c] transition-colors duration-300">
+              <span className="text-base sm:text-[1.15rem] font-black tracking-[-0.03em] uppercase text-foreground group-hover:text-[#c9a84c] transition-colors duration-300">
                 MAISON NIANG
               </span>
               <span className="text-[0.5rem] tracking-[0.3em] text-[#c9a84c]/70 uppercase hidden xl:block transition-opacity duration-300">
