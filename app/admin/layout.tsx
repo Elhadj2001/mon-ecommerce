@@ -1,10 +1,11 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, ShoppingBag, ArrowLeft,
-  TrendingUp, Settings, BellRing, ChevronRight
+  TrendingUp, Settings, BellRing, ChevronRight, Menu, X
 } from 'lucide-react'
 import { UserButton } from '@clerk/nextjs'
 import { motion } from 'framer-motion'
@@ -17,14 +18,35 @@ const NAV_LINKS = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   return (
     <div className="flex min-h-screen bg-[#f8f8f8] dark:bg-[#0d0d0f]">
 
+      {/* OVERLAY MOBILE */}
+      {isMobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
       {/* ══════════════════════════════════════
           SIDEBAR PREMIUM
       ══════════════════════════════════════ */}
-      <aside className="w-64 bg-[#09090b] flex flex-col shrink-0 relative overflow-hidden">
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-[#09090b] flex flex-col shrink-0 overflow-hidden transition-transform duration-300 ease-in-out
+        ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:relative md:translate-x-0
+      `}>
+
+        {/* Bouton fermeture mobile */}
+        <button 
+          onClick={() => setIsMobileOpen(false)}
+          className="absolute top-4 right-4 text-white/50 hover:text-white md:hidden z-50 p-2"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
         {/* Décoration fond sidebar */}
         <div className="absolute inset-0 pointer-events-none">
@@ -66,6 +88,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => setIsMobileOpen(false)}
                 className={`
                   relative flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold
                   transition-all duration-200 group
@@ -112,16 +135,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* ── Top Bar ── */}
-        <header className="h-14 bg-white dark:bg-[#111113] border-b border-border flex items-center justify-between px-6 shrink-0">
-          {/* Breadcrumb / titre */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="font-bold text-foreground">Maison Niang</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="capitalize">
+        <header className="h-14 bg-white dark:bg-[#111113] border-b border-border flex items-center justify-between px-4 sm:px-6 shrink-0">
+          
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Bouton Hamburger (Mobile uniquement) */}
+            <button 
+              onClick={() => setIsMobileOpen(true)}
+              className="md:hidden p-1.5 -ml-1 text-foreground hover:bg-secondary rounded-md"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+
+            {/* Breadcrumb / titre */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="font-bold text-foreground hidden sm:inline">Maison Niang</span>
+              <ChevronRight className="w-3 h-3 hidden sm:inline" />
+              <span className="capitalize font-bold sm:font-normal text-foreground sm:text-muted-foreground">
               {pathname === '/admin'
                 ? 'Dashboard'
                 : pathname.split('/').filter(Boolean).slice(1).join(' › ')}
-            </span>
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

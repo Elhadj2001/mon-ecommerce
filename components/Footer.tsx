@@ -13,10 +13,10 @@ const LINKS = {
     { label: 'Ma wishlist', href: '/wishlist' },
   ],
   info: [
-    { label: 'Notre histoire', href: '/' },
-    { label: 'Mon compte', href: '/account' },
-    { label: 'Suivi de commande', href: '/account' },
-    { label: 'Politique de retour', href: '/' },
+    { label: 'Notre histoire', href: '/about' },
+    { label: 'Nous contacter', href: '/contact' },
+    { label: 'Suivi de commande', href: '/account/orders' },
+    { label: 'Politique de retour', href: '/returns' },
   ],
 }
 

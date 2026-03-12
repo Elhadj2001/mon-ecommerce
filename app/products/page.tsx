@@ -77,25 +77,25 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   else if (params.gender) title = `Collection ${params.gender}`
 
   return (
-    <div className="bg-white">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background text-foreground pt-12 pb-24">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         
         {/* EN-TÊTE DE LA PAGE */}
-        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between border-b border-gray-200 pb-6 mb-8 gap-4">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 uppercase">
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between border-b border-border pb-6 mb-12 gap-4">
+            <h1 className="text-3xl sm:text-5xl font-display uppercase tracking-tight">
                 {title}
             </h1>
-            <span className="text-sm text-gray-500 font-medium whitespace-nowrap">
-                {products.length} article{products.length > 1 ? 's' : ''}
+            <span className="text-sm font-bold uppercase tracking-widest text-[#c9a84c] whitespace-nowrap">
+                {products.length} pièce{products.length > 1 ? 's' : ''}
             </span>
         </div>
 
         {/* GRILLE DE PRODUITS */}
         {products.length === 0 ? (
-           <div className="flex flex-col items-center justify-center py-20 text-center bg-gray-50 rounded-xl">
-             <div className="text-4xl mb-4">🔍</div>
-             <p className="text-gray-900 font-medium text-lg">Aucun produit trouvé.</p>
-             <p className="text-gray-500 text-sm mt-1">Essayez de modifier vos filtres.</p>
+           <div className="flex flex-col items-center justify-center py-20 text-center bg-secondary/30 rounded-xl border border-border">
+             <div className="text-4xl mb-4 opacity-50">✦</div>
+             <p className="font-bold text-lg uppercase tracking-widest">Aucune pièce trouvée.</p>
+             <p className="text-muted-foreground text-sm mt-3">L&apos;exclusivité demande de la patience, essayez d&apos;autres filtres.</p>
            </div>
         ) : (
            // CORRECTION GRILLE : grid-cols-2 sur mobile (comme Shein)

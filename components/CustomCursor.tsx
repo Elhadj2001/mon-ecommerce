@@ -8,10 +8,13 @@ export default function CustomCursor() {
   const [isDesktop, setIsDesktop] = useState(false)
 
   useEffect(() => {
-    // Vérifie si l'appareil a une vraie souris (pas un écran tactile)
+    // Vérifie si l'appareil a une vraie souris (pas un écran tactile) au premier montage
     const hasMouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches
-    if (!hasMouse) return
-    setIsDesktop(true)
+    setIsDesktop(hasMouse)
+  }, [])
+
+  useEffect(() => {
+    if (!isDesktop) return
 
     const dot = dotRef.current
     const ring = ringRef.current
@@ -59,7 +62,7 @@ export default function CustomCursor() {
       document.removeEventListener('mouseover', onMouseOver)
       cancelAnimationFrame(animId)
     }
-  }, [])
+  }, [isDesktop]) // S'exécute uniquement après l'activation desktop
 
   if (!isDesktop) return null
 
