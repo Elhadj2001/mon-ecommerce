@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { convertToXof } from '@/lib/currency' // <-- Import de l'utilitaire
+import { auth } from '@clerk/nextjs/server'
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,8 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   try {
+    const { userId } = await auth()
+    
     const json = await req.json()
     const items = json.items as CheckoutItem[]
 
@@ -102,6 +105,7 @@ export async function POST(req: Request) {
     const order = await prisma.order.create({
       data: {
         isPaid: false,
+        clerkUserId: userId, // <-- Enregistrement de l'ID Clerk
         orderItems: {
           create: items.map((item) => ({
             product: { connect: { id: item.id } },

@@ -70,8 +70,9 @@ model Image {
 
 model Order {
   id        String      @id @default(uuid())
-  userId    String?     
-  user      User?       @relation(fields: [userId], references: [id])
+  userId      String?     
+  user        User?       @relation(fields: [userId], references: [id])
+  clerkUserId String?     // <-- ID Clerk du client connecté (optionnel pour achats invités)
   orderItems OrderItem[]
   isPaid    Boolean     @default(false)
   phone     String      @default("")

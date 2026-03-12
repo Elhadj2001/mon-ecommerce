@@ -15,10 +15,11 @@ export default async function OrdersPage() {
   if (!userId) redirect("/sign-in")
 
   // Récupération des commandes de l'utilisateur connecté
-  // Note : Pour lier les commandes à un user Clerk, il faudrait stocker le clerkUserId
-  // dans la table Order. Pour l'instant, on affiche les dernières commandes payées.
   const orders = await prisma.order.findMany({
-    where: { isPaid: true },
+    where: { 
+      isPaid: true,
+      clerkUserId: userId
+    },
     include: {
       orderItems: {
         include: { product: { include: { images: true } } }
