@@ -8,6 +8,8 @@ import {
 } from 'lucide-react'
 import { formatPrice, convertToXof } from '@/lib/currency'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboardPage() {
   const [paidOrders, pendingOrdersCount, productsCount, allProducts, recentOrders] = await Promise.all([
     prisma.order.findMany({

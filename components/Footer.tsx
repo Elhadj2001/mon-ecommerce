@@ -13,10 +13,11 @@ const LINKS = {
     { label: 'Ma wishlist', href: '/wishlist' },
   ],
   info: [
-    { label: 'Notre histoire', href: '/about' },
-    { label: 'Nous contacter', href: '/contact' },
     { label: 'Suivi de commande', href: '/account/orders' },
-    { label: 'Politique de retour', href: '/returns' },
+    { label: 'Guide des tailles', href: '/guide-tailles' },
+    { label: 'Politique de retour', href: '/retours' },
+    { label: 'CGV', href: '/cgv' },
+    { label: 'Nous contacter', href: '/contact' },
   ],
 }
 
@@ -78,7 +79,7 @@ export default function Footer() {
               {[
                 { icon: MapPin, text: 'Saint-Louis Balacoss, Rue Abba Mbaye, Sénégal' },
                 { icon: Phone, text: '+221 78 173 79 59' },
-                { icon: Mail, text: 'eniang68@gmail.com' },
+                { icon: Mail, text: 'contact@maison-niang.fr' },
               ].map(({ icon: Icon, text }, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <Icon size={13} className="text-[#c9a84c] shrink-0" />
@@ -192,7 +193,7 @@ export default function Footer() {
                 { icon: Instagram, href: 'https://instagram.com', label: 'Instagram' },
                 { icon: Facebook, href: 'https://facebook.com', label: 'Facebook' },
                 { icon: Youtube, href: 'https://youtube.com', label: 'YouTube' },
-                { icon: Mail, href: 'mailto:eniang68@gmail.com', label: 'Email' },
+                { icon: Mail, href: 'mailto:contact@maison-niang.fr', label: 'Email' },
               ].map(({ icon: Icon, href, label }) => (
                 <a
                   key={label}

@@ -80,10 +80,15 @@ export function CommandMenu() {
         open={open} 
         onOpenChange={setOpen}
         label="Recherche globale"
-        className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 flex items-start justify-center pt-[20vh] sm:pt-[10vh]"
+        className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] sm:pt-[10vh]"
       >
+        {/* Overlay cliquable pour fermer */}
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm animate-in fade-in-0"
+          onClick={() => setOpen(false)}
+        />
         <DialogTitle className="sr-only">Menu de recherche temporelle</DialogTitle>
-        <div className="relative w-full max-w-2xl bg-popover text-popover-foreground shadow-2xl rounded-xl border border-border overflow-hidden ring-1 ring-border shadow-black/10 mx-4">
+        <div className="relative w-full max-w-2xl bg-popover text-popover-foreground shadow-2xl rounded-xl border border-border overflow-hidden ring-1 ring-border shadow-black/10 mx-4 z-10">
             
             <div className="flex items-center px-4 border-b border-border">
                 <Search className="w-5 h-5 text-muted-foreground mr-2 shrink-0" />
@@ -113,7 +118,6 @@ export function CommandMenu() {
                                 className="flex items-center gap-4 px-2 py-3 cursor-pointer rounded-md hover:bg-accent hover:text-accent-foreground aria-selected:bg-accent aria-selected:text-accent-foreground mt-1 group"
                             >
                                 <div className="h-12 w-12 rounded bg-secondary relative overflow-hidden flex-shrink-0">
-                                    {/* Si l'API renvoie des images, sinon un placeholder */}
                                     {product.images?.[0] ? (
                                         <CustomImage src={product.images[0].url} alt={product.name} fill className="object-cover" />
                                     ) : (

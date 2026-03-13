@@ -4,7 +4,6 @@ import { useCart } from '@/hooks/use-cart'
 import { CustomImage } from '@/components/ui/CustomImage'
 import Link from 'next/link'
 import { Trash2, ShoppingBag, ArrowRight, Minus, Plus } from 'lucide-react'
-import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatPrice } from '@/lib/currency' // <-- Import
@@ -43,24 +42,8 @@ export default function CartClient() {
     return total + Number(item.price) * item.quantity
   }, 0)
 
-  const onCheckout = async () => {
-    try {
-      setLoading(true)
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_APP_URL}/api/checkout`, {
-        items: items.map(item => ({
-            id: item.id,
-            quantity: item.quantity,
-            selectedSize: item.selectedSize,
-            selectedColor: item.selectedColor
-        }))
-      })
-      window.location = response.data.url
-    } catch (error) {
-      console.error(error)
-      alert("Une erreur est survenue lors du paiement.")
-    } finally {
-      setLoading(false)
-    }
+  const onCheckout = () => {
+    router.push('/checkout')
   }
 
   const getColorStyle = (c: string) => {
@@ -179,7 +162,9 @@ export default function CartClient() {
                                     </span>
                                     <button 
                                         onClick={() => onIncrease(item.cartId)}
-                                        className="p-2 hover:bg-gray-100 text-gray-600 transition"
+                                        disabled={item.quantity >= item.stock}
+                                        className={`p-2 transition ${item.quantity >= item.stock ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 text-gray-600'}`}
+                                        title={item.quantity >= item.stock ? "Stock maximum atteint" : ""}
                                     >
                                         <Plus size={14} />
                                     </button>
@@ -226,14 +211,14 @@ export default function CartClient() {
 
           <button
             onClick={onCheckout}
-            disabled={loading}
+            disabled={items.length === 0}
             className="mt-8 flex w-full items-center justify-center rounded-md border border-transparent bg-black px-8 py-3 text-base font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Redirection Stripe...' : 'Payer maintenant'}
+            Valider la commande
           </button>
           
           <p className="mt-4 text-xs text-center text-gray-400">
-             Paiement 100% sécurisé via Stripe.
+             Traitement rapide et paiement sécurisé à la livraison.
           </p>
         </div>
       </div>

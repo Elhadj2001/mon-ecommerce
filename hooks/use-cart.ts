@@ -8,6 +8,7 @@ export interface CartItem {
   price: number
   images: string[] 
   quantity: number
+  stock: number // Ajout de la limite de stock
   selectedSize?: string
   selectedColor?: string
   cartId: string
@@ -40,19 +41,38 @@ export const useCart = create(
         const existingItem = currentItems.find((item) => item.cartId === newCartId)
 
         if (existingItem) {
-          set({
-            items: currentItems.map((item) => 
-              item.cartId === newCartId 
-                ? { ...item, quantity: item.quantity + data.quantity } 
-                : item
-            )
-          })
-          toast.success("Quantité mise à jour")
+          // Bloquer si on dépasse le stock
+          if (existingItem.quantity + data.quantity > data.stock) {
+            set({
+              items: currentItems.map((item) => 
+                item.cartId === newCartId 
+                  ? { ...item, quantity: data.stock } 
+                  : item
+              )
+            })
+            toast.error(`Stock maximum atteint (${data.stock} disponibles)`)
+          } else {
+            set({
+              items: currentItems.map((item) => 
+                item.cartId === newCartId 
+                  ? { ...item, quantity: item.quantity + data.quantity } 
+                  : item
+              )
+            })
+            toast.success("Quantité mise à jour")
+          }
         } else {
+          // Bloquer d'emblée si quantity demandée > stock (rare mais au cas où)
+          const validQuantity = Math.min(data.quantity, data.stock)
+          if (validQuantity < data.quantity) {
+             toast.error(`Stock limité à ${data.stock} articles`)
+          } else {
+             toast.success("Produit ajouté au panier")
+          }
+          
           set({ 
-            items: [...currentItems, { ...data, cartId: newCartId }] 
+            items: [...currentItems, { ...data, cartId: newCartId, quantity: validQuantity }] 
           })
-          toast.success("Produit ajouté au panier")
         }
         
         // Ouvrir le panier au moment de l'ajout
@@ -65,8 +85,17 @@ export const useCart = create(
 
       updateQuantity: (cartId, quantity) => {
         const currentItems = get().items
+        const itemToUpdate = currentItems.find((item) => item.cartId === cartId)
+        
+        if (!itemToUpdate) return;
+        
         if (quantity <= 0) {
           set({ items: currentItems.filter((item) => item.cartId !== cartId) })
+        } else if (quantity > itemToUpdate.stock) {
+          toast.error(`Stock maximum atteint (${itemToUpdate.stock} disponibles)`)
+          set({ items: currentItems.map((item) => 
+             item.cartId === cartId ? { ...item, quantity: itemToUpdate.stock } : item 
+          )})
         } else {
           set({ items: currentItems.map((item) => 
              item.cartId === cartId ? { ...item, quantity } : item 

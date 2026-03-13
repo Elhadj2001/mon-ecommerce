@@ -1,6 +1,7 @@
 "use client"
 
 import { CldImage } from "next-cloudinary"
+import Image from "next/image"
 
 interface CustomImageProps {
   src: string
@@ -16,6 +17,7 @@ interface CustomImageProps {
 export function CustomImage({ src, alt, fill, width, height, className, sizes, priority }: CustomImageProps) {
   // on s'assure que si c'est une image cloudinary, on extrait le publicId, sinon on la passe telle quelle à un <img> fallback
   const isCloudinaryUrl = src.includes("res.cloudinary.com")
+  const isLocalPath = src.startsWith("/") || src.startsWith("./")
   
   // Extraction robuste du public ID depuis une URL Cloudinary complète
   const getPublicId = (url: string) => {
@@ -36,7 +38,7 @@ export function CustomImage({ src, alt, fill, width, height, className, sizes, p
 
   const imageSrc = isCloudinaryUrl ? getPublicId(src) : src
 
-  if (isCloudinaryUrl || !src.startsWith("http")) {
+  if (isCloudinaryUrl || (!src.startsWith("http") && !isLocalPath)) {
     return (
       <CldImage
         src={imageSrc}
@@ -53,15 +55,18 @@ export function CustomImage({ src, alt, fill, width, height, className, sizes, p
     )
   }
 
-  // Fallback pour les images externes (comme placeholder.png ou images non imgix/cloudinary)
-  // eslint-disable-next-line @next/next/no-img-element
+  // Fallback pour les images externes (comme placeholder.png ou images unsplash)
   return (
-    <img 
+    <Image 
       src={src} 
-      alt={alt} 
+      alt={alt || "Image"} 
+      fill={fill}
+      width={fill ? undefined : (width || 800)}
+      height={fill ? undefined : (height || 800)}
       className={className} 
-      style={fill ? { width: '100%', height: '100%', objectFit: 'cover' } : { width, height }} 
-      loading="lazy"
+      sizes={sizes || "(max-width: 768px) 100vw, 50vw"}
+      priority={priority}
+      style={fill ? { objectFit: 'cover' } : undefined}
     />
   )
 }

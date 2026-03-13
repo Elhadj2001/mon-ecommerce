@@ -49,7 +49,7 @@ export default function ContactPage() {
                 </div>
                 <div>
                   <h3 className="font-bold uppercase tracking-widest text-sm mb-1">Email</h3>
-                  <p className="text-muted-foreground">eniang68@gmail.com</p>
+                  <p className="text-muted-foreground">contact@maison-niang.fr</p>
                 </div>
               </div>
             </div>

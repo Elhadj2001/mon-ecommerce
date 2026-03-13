@@ -23,7 +23,7 @@ export const sendOrderEmail = async (
 
     const data = await resend.emails.send({
       from: `MAISON NIANG Boutique <${FROM_EMAIL}>`,
-      replyTo: 'eniang68@gmail.com',
+      replyTo: 'contact@maison-niang.fr',
       to: email,
       subject: `✅ Commande confirmée #${shortId} — Merci !`,
       html: `
@@ -112,6 +112,42 @@ export const sendOrderEmail = async (
 
   } catch (error) {
     console.error("[MAIL] Exception lors de l'envoi:", error);
+    return { success: false, error };
+  }
+};
+
+export const sendLowStockAlertEmail = async (
+  productName: string,
+  productId: string,
+  currentStock: number
+) => {
+  if (!process.env.RESEND_API_KEY) {
+    console.error("[MAIL] Clé API Resend manquante.");
+    return { success: false, error: "Missing API Key" };
+  }
+
+  try {
+    const data = await resend.emails.send({
+      from: `MAISON NIANG Alerte <${FROM_EMAIL}>`,
+      to: 'contact@maison-niang.fr', // Alerte directe à l'admin
+      subject: `⚠️ ALERTE STOCK CRITIQUE : ${productName} (Plus que ${currentStock})`,
+      html: `
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2 style="color: #d97706;">⚠️ Alerte de Stock Faible</h2>
+          <p>Bonjour,</p>
+          <p>Le produit <strong>${productName}</strong> a atteint un niveau de stock critique suite à une commande.</p>
+          <p>Stock restant : <strong style="color: red; font-size: 18px;">${currentStock}</strong></p>
+          <p>
+            <a href="${APP_URL}/admin/products" style="display:inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 6px; margin-top: 16px; font-weight: bold;">
+              Gérer les stocks
+            </a>
+          </p>
+        </div>
+      `
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("[MAIL] Erreur envoi alerte stock:", error);
     return { success: false, error };
   }
 };

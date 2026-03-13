@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Package, ShoppingBag, ArrowLeft,
-  TrendingUp, Settings, BellRing, ChevronRight, Menu, X
+  TrendingUp, Settings, BellRing, ChevronRight, Menu, X, Tag
 } from 'lucide-react'
 import { UserButton } from '@clerk/nextjs'
 import { motion } from 'framer-motion'
@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/products', label: 'Produits', icon: Package },
   { href: '/admin/orders', label: 'Commandes', icon: ShoppingBag },
+  { href: '/admin/promos', label: 'Codes Promo', icon: Tag },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

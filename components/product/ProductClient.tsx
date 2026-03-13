@@ -80,6 +80,7 @@ export default function ProductClient({ product }: ProductClientProps) {
       price: Number(product.price),
       images: [mainImage], 
       quantity: 1,
+      stock: stock,
       selectedSize: selectedSize,
       selectedColor: selectedColor
     })

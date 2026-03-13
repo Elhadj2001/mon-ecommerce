@@ -87,6 +87,7 @@ export default function ProductCard({ data }: ProductCardProps) {
       price: price, // On garde le prix EUR dans le panier, la conversion se fera à l'affichage
       images: [currentImage || ''], 
       quantity: 1,
+      stock: Number(data.stock),
       selectedSize: size,
       selectedColor: color
     })

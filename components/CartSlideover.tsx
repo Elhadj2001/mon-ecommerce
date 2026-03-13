@@ -177,7 +177,9 @@ export function CartSlideover() {
                               </span>
                               <button
                                 onClick={() => cart.updateQuantity(item.cartId, item.quantity + 1)}
-                                className="p-1 px-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                                disabled={item.quantity >= item.stock}
+                                className={`p-1 px-2 transition-colors ${item.quantity >= item.stock ? 'opacity-30 cursor-not-allowed' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+                                title={item.quantity >= item.stock ? "Stock maximum atteint" : ""}
                               >
                                 <Plus className="w-3 h-3" />
                               </button>
@@ -210,7 +212,7 @@ export function CartSlideover() {
                      onClick={handleCheckoutClick}
                      className="w-full flex items-center justify-center py-3 px-4 rounded-md bg-foreground text-background font-semibold hover:opacity-90 transition-opacity uppercase text-sm"
                    >
-                     Procéder au paiement
+                     Voir le panier complet
                    </button>
                    <button
                      onClick={cart.onClose}

@@ -9,6 +9,7 @@ import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { CartSlideover } from '@/components/CartSlideover'
 import ClientOnlyComponents from '@/components/ClientOnlyComponents'
+import { AnnouncementBar } from '@/components/AnnouncementBar'
 
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -63,6 +64,7 @@ export default function RootLayout({
             />
             
             <div className="flex min-h-screen flex-col">
+              <AnnouncementBar />
               <Navbar />
               <main className="flex-grow">
                 {children}
