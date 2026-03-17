@@ -168,11 +168,11 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="bg-white min-h-screen py-16 px-4 sm:px-6 lg:px-8">
+    <div className="bg-background min-h-screen py-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
-          <h1 className="text-3xl font-black uppercase tracking-tighter text-black">Finaliser la Commande</h1>
-          <p className="mt-2 text-gray-500">Remplissez vos informations et choisissez votre moyen de paiement.</p>
+          <h1 className="text-3xl font-black uppercase tracking-tighter text-foreground">Finaliser la Commande</h1>
+          <p className="mt-2 text-muted-foreground">Remplissez vos informations et choisissez votre moyen de paiement.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-12 gap-y-16">
@@ -198,7 +198,7 @@ export default function CheckoutPage() {
                       value={formData.name}
                       onChange={handleChange}
                       placeholder="Ex: Aissatou Ndiaye"
-                      className="w-full border border-gray-300 rounded-lg shadow-sm focus:border-black focus:ring-1 focus:ring-black outline-none px-4 py-3 transition"
+                      className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
 
@@ -211,7 +211,7 @@ export default function CheckoutPage() {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="+221 77 123 45 67"
-                      className="w-full border border-gray-300 rounded-lg shadow-sm focus:border-black focus:ring-1 focus:ring-black outline-none px-4 py-3 transition"
+                      className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
 
@@ -223,7 +223,7 @@ export default function CheckoutPage() {
                       value={formData.email}
                       onChange={handleChange}
                       placeholder="Pour le reçu"
-                      className="w-full border border-gray-300 rounded-lg shadow-sm focus:border-black focus:ring-1 focus:ring-black outline-none px-4 py-3 transition"
+                      className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
 
@@ -236,7 +236,7 @@ export default function CheckoutPage() {
                       value={formData.address}
                       onChange={handleChange}
                       placeholder="Quartier, Rue, Numéro..."
-                      className="w-full border border-gray-300 rounded-lg shadow-sm focus:border-black focus:ring-1 focus:ring-black outline-none px-4 py-3 transition"
+                      className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
 
@@ -249,7 +249,7 @@ export default function CheckoutPage() {
                       value={formData.city}
                       onChange={handleChange}
                       placeholder="Ex: Dakar, Sénégal"
-                      className="w-full border border-gray-300 rounded-lg shadow-sm focus:border-black focus:ring-1 focus:ring-black outline-none px-4 py-3 transition"
+                      className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
                 </div>

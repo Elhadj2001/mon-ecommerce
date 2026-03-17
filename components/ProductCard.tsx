@@ -134,9 +134,17 @@ export default function ProductCard({ data }: ProductCardProps) {
             </button>
         )}
 
-        {/* BOUTON WISHLIST */}
+        {/* BOUTON WISHLIST - avec props sécurisés */}
         <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <WishlistButton product={data} size="sm" />
+          <WishlistButton
+            product={{
+              id: data.id,
+              name: data.name,
+              price: data.price,
+              images: data.images?.length ? data.images : [{ url: '/placeholder.png' }]
+            }}
+            size="sm"
+          />
         </div>
       </Link>
 

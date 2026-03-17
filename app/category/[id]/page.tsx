@@ -86,33 +86,32 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     <div className="bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
 
-        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-200 pb-6 mb-8 gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border pb-6 mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-gray-900 uppercase">
+            <h1 className="text-3xl font-black tracking-tight text-foreground uppercase">
               {category.name}
             </h1>
-            {/* 4. Feedback visuel pour l'utilisateur */}
             {gender && (
-              <p className="text-sm font-bold text-gray-500 uppercase tracking-widest mt-2">
+              <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mt-2">
                 Collection {gender}
               </p>
             )}
           </div>
 
-          <span className="text-sm text-gray-500 font-medium whitespace-nowrap">
+          <span className="text-sm text-muted-foreground font-medium whitespace-nowrap">
             {category.products.length} résultat{category.products.length > 1 ? 's' : ''}
           </span>
         </div>
 
         {category.products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center bg-gray-50 rounded-lg">
-            <p className="text-gray-900 font-medium text-lg">Aucun produit trouvé.</p>
-            <p className="text-gray-500 text-sm mt-2">
+          <div className="flex flex-col items-center justify-center py-20 text-center bg-secondary/50 rounded-2xl border border-border">
+            <p className="text-foreground font-medium text-lg">Aucun produit trouvé.</p>
+            <p className="text-muted-foreground text-sm mt-2">
               Essayez de changer de collection ou revenez plus tard.
             </p>
             {gender && (
-              <a href={`/category/${categoryId}`} className="mt-4 text-black underline text-sm font-bold">
-                Voir tous les produits {category.name} (Homme & Femme)
+              <a href={`/category/${categoryId}`} className="mt-4 text-[#c9a84c] underline text-sm font-bold">
+                Voir tous les produits {category.name} (Homme &amp; Femme)
               </a>
             )}
           </div>
