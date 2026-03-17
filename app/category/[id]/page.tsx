@@ -55,9 +55,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     isArchived: false
   }
 
-  // Si un genre est présent dans l'URL, on l'ajoute au filtre
+  // Si un genre est présent dans l'URL, on inclut aussi les produits Unisexe
   if (gender) {
-    productsWhereClause.gender = gender;
+    productsWhereClause.gender = { in: [gender, 'Unisexe'] };
   }
 
   const category = await prisma.category.findUnique({
@@ -83,7 +83,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   return (
-    <div className="bg-white">
+    <div className="bg-background">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
 
         <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-gray-200 pb-6 mb-8 gap-4">

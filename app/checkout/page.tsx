@@ -62,12 +62,15 @@ export default function CheckoutPage() {
     setIsMounted(true)
   }, [])
 
-  if (!isMounted) return null
+  // Redirection si panier vide — dans un useEffect pour éviter l'erreur React
+  useEffect(() => {
+    if (isMounted && cart.items.length === 0) {
+      router.push('/cart')
+    }
+  }, [isMounted, cart.items.length, router])
 
-  if (cart.items.length === 0) {
-    router.push("/cart")
-    return null
-  }
+  if (!isMounted) return null
+  if (cart.items.length === 0) return null  // évite le rendu pendant la redirection
 
   const subtotalEur = cart.items.reduce((total, item) => {
     return total + Number(item.price) * item.quantity

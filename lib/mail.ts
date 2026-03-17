@@ -5,6 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY || 're_missing_key');
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mon-ecommerce-rho.vercel.app';
 
+
 export const sendOrderEmail = async (
   email: string, 
   orderId: string, 
@@ -151,3 +152,100 @@ export const sendLowStockAlertEmail = async (
     return { success: false, error };
   }
 };
+
+// ── ALERTE ADMIN : Nouvelle commande reçue ──
+export const sendAdminAlertEmail = async (
+  adminEmail: string,
+  orderId: string,
+  totalEUR: number,
+  customerEmail: string,
+  orderItems: Array<{ quantity: number; product: { name: string; price: unknown } }>
+) => {
+  if (!process.env.RESEND_API_KEY) return { success: false };
+
+  const shortId = orderId.substring(0, 8).toUpperCase();
+  const formattedTotal = formatPrice(totalEUR);
+  const date = new Date().toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  const itemsRows = orderItems.map(item => 
+    `<tr>
+      <td style="padding:6px 0;border-bottom:1px solid #e4e4e7;font-size:13px;color:#3f3f46;">${item.quantity} × ${item.product.name}</td>
+      <td style="text-align:right;padding:6px 0;border-bottom:1px solid #e4e4e7;font-size:13px;font-weight:700;">${formatPrice(Number(item.product.price) * item.quantity)}</td>
+    </tr>`
+  ).join('')
+
+  try {
+    await resend.emails.send({
+      from: `MAISON NIANG Boutique <${FROM_EMAIL}>`,
+      to: adminEmail,
+      subject: `🛍️ Nouvelle commande #${shortId} — ${formattedTotal}`,
+      html: `
+        <!DOCTYPE html>
+        <html lang="fr">
+        <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 0;">
+            <tr><td align="center">
+              <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+                <tr>
+                  <td style="background:#0a0a0a;padding:24px 32px;text-align:center;">
+                    <div style="display:inline-block;background:#c9a84c;color:#0a0a0a;font-size:11px;font-weight:900;letter-spacing:3px;text-transform:uppercase;padding:4px 12px;border-radius:20px;margin-bottom:8px;">Alerte Commande</div>
+                    <h1 style="margin:0;color:#fff;font-size:20px;font-weight:900;letter-spacing:4px;text-transform:uppercase;">MAISON NIANG</h1>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding:24px 32px;">
+                    <h2 style="margin:0 0 16px;color:#0a0a0a;font-size:18px;font-weight:800;">🛍️ Nouvelle commande reçue !</h2>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9f9f9;border-radius:10px;padding:16px;margin-bottom:20px;">
+                      <tr>
+                        <td style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:2px;">Référence</td>
+                        <td style="text-align:right;font-size:16px;font-weight:900;color:#0a0a0a;letter-spacing:3px;">#${shortId}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:2px;padding-top:8px;">Date</td>
+                        <td style="text-align:right;font-size:13px;color:#3f3f46;padding-top:8px;">${date}</td>
+                      </tr>
+                      <tr>
+                        <td style="font-size:11px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:2px;padding-top:8px;">Client</td>
+                        <td style="text-align:right;font-size:13px;color:#3f3f46;padding-top:8px;">${customerEmail}</td>
+                      </tr>
+                    </table>
+
+                    <h3 style="font-size:12px;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px;">Articles commandés</h3>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      ${itemsRows}
+                      <tr>
+                        <td style="padding-top:12px;font-size:14px;font-weight:900;color:#0a0a0a;">TOTAL</td>
+                        <td style="text-align:right;padding-top:12px;font-size:18px;font-weight:900;color:#c9a84c;">${formattedTotal}</td>
+                      </tr>
+                    </table>
+
+                    <div style="text-align:center;margin-top:24px;">
+                      <a href="${APP_URL}/admin/orders" style="display:inline-block;background:#0a0a0a;color:#fff;padding:12px 28px;border-radius:32px;font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:2px;text-decoration:none;">
+                        Voir dans l'admin →
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="background:#f9f9f9;padding:16px 32px;text-align:center;border-top:1px solid #f0f0f0;">
+                    <p style="margin:0;font-size:11px;color:#a1a1aa;">MAISON NIANG · Alerte automatique</p>
+                  </td>
+                </tr>
+
+              </table>
+            </td></tr>
+          </table>
+        </body>
+        </html>
+      `
+    })
+    return { success: true }
+  } catch (error) {
+    console.error("[MAIL] Erreur alerte admin:", error)
+    return { success: false, error }
+  }
+}
