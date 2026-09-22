@@ -69,9 +69,12 @@ export default async function OrdersPage() {
             {orders.map((order) => {
               const statusInfo = STATUS_MAP[order.status] ?? STATUS_MAP.PENDING
               const StatusIcon = statusInfo.icon
-              const total = order.orderItems.reduce(
+              const subtotal = order.orderItems.reduce(
                 (acc, item) => acc + Number(item.product.price) * item.quantity, 0
               )
+              const shippingCost = Number(order.shippingCost || 0)
+              const discount = Number(order.discount || 0)
+              const total = subtotal + shippingCost - discount
               const paymentLabel = PAYMENT_LABELS[order.paymentMethod] || order.paymentMethod
 
               return (

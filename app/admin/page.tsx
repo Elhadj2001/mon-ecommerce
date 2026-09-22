@@ -29,7 +29,8 @@ export default async function AdminDashboardPage() {
 
   const totalRevenueEUR = paidOrders.reduce((total, order) =>
     total + order.orderItems.reduce((sum, item) =>
-      sum + (Number(item.product.price) * item.quantity), 0), 0)
+      sum + (Number(item.product.price) * item.quantity), 0)
+      + Number(order.shippingCost || 0) - Number(order.discount || 0), 0)
 
   const salesCount = paidOrders.length
   const stockValueEUR = allProducts.reduce((acc, item) => acc + (Number(item.price) * item.stock), 0)
@@ -40,7 +41,8 @@ export default async function AdminDashboardPage() {
   for (const order of paidOrders) {
     const month = order.createdAt.toLocaleDateString("fr-FR", { month: "short" })
     const orderTotalXOF = convertToXof(order.orderItems.reduce((sum, item) =>
-      sum + (Number(item.product.price) * item.quantity), 0))
+      sum + (Number(item.product.price) * item.quantity), 0)
+      + Number(order.shippingCost || 0) - Number(order.discount || 0))
     graphData[month] = (graphData[month] || 0) + orderTotalXOF
   }
   const chartData = Object.entries(graphData).map(([name, total]) => ({ name, total }))

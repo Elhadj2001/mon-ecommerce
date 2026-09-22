@@ -51,7 +51,10 @@ export default async function SuccessPage({ params }: { params: Promise<{ orderI
     )
   }
 
-  const total = order.orderItems.reduce((acc, item) => acc + Number(item.product.price) * item.quantity, 0)
+  const subtotal = order.orderItems.reduce((acc, item) => acc + Number(item.product.price) * item.quantity, 0)
+  const shippingCost = Number(order.shippingCost || 0)
+  const discount = Number(order.discount || 0)
+  const total = subtotal + shippingCost - discount
   const firstName = order.name ? order.name.split(' ')[0] : "Client"
   const statusInfo = STATUS_LABELS[order.status] ?? STATUS_LABELS.PENDING
 
