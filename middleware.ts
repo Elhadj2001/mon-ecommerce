@@ -1,12 +1,42 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-// Protection des routes /admin et des routes d'API sensibles
-const isProtectedRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)', '/api/products(.*)', '/account(.*)']);
+const ADMIN_USER_IDS = (process.env.ADMIN_USER_IDS ?? '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean)
+
+const isAdminRoute = createRouteMatcher(['/admin(.*)', '/api/admin(.*)'])
+const isProtectedRoute = createRouteMatcher([
+  '/admin(.*)',
+  '/api/admin(.*)',
+  '/api/products(.*)',
+  '/account(.*)',
+])
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    // Si la route est protégée, Clerk vérifie la session
-    await auth.protect();
+  if (!isProtectedRoute(req)) return
+
+  const { userId, sessionClaims } = await auth()
+
+  if (!userId) {
+    await auth.protect()
+    return
+  }
+
+  if (isAdminRoute(req)) {
+    const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role
+    const isAdmin = role === 'admin' || ADMIN_USER_IDS.includes(userId)
+
+    if (!isAdmin) {
+      if (req.nextUrl.pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { error: 'Accès refusé : droits admin requis' },
+          { status: 403 },
+        )
+      }
+      return NextResponse.redirect(new URL('/', req.url))
+    }
   }
 });
 

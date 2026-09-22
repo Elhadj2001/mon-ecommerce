@@ -26,6 +26,10 @@ interface OrderEmailData {
   status: string
   paymentMethod: string
   total: number
+  subtotal: number
+  shippingCost: number
+  discount: number
+  promoCode?: string | null
   items: { name: string; quantity: number; price: number; size?: string | null; color?: string | null }[]
 }
 
@@ -109,13 +113,26 @@ export async function sendOrderStatusEmail(data: OrderEmailData) {
           ${itemsHtml}
         </table>
 
-        <!-- Total -->
-        <div style="margin-top: 20px; padding-top: 20px; border-top: 2px dashed #eee; display: flex; justify-content: space-between;">
-          <table style="width: 100%;"><tr>
-            <td style="font-weight: bold; font-size: 16px;">Total</td>
-            <td style="text-align: right; font-weight: bold; font-size: 20px;">${formatCFA(data.total)}</td>
-          </tr></table>
-        </div>
+        <!-- Total Détail -->
+        <table style="width: 100%; margin-top: 20px; padding-top: 20px; border-top: 2px dashed #eee;">
+          <tr>
+            <td style="color: #666; font-size: 14px; padding-bottom: 8px;">Sous-total</td>
+            <td style="text-align: right; color: #333; font-size: 14px; font-weight: bold; padding-bottom: 8px;">${formatCFA(data.subtotal)}</td>
+          </tr>
+          <tr>
+            <td style="color: #666; font-size: 14px; padding-bottom: 8px;">Livraison ${data.shippingCost === 0 ? '(Gratuite)' : ''}</td>
+            <td style="text-align: right; color: #333; font-size: 14px; font-weight: bold; padding-bottom: 8px;">${data.shippingCost === 0 ? 'Offerte' : formatCFA(data.shippingCost)}</td>
+          </tr>
+          ${data.discount > 0 ? `
+          <tr>
+            <td style="color: #25D366; font-size: 14px; padding-bottom: 15px;">Réduction ${data.promoCode ? `(${data.promoCode})` : ''}</td>
+            <td style="text-align: right; color: #25D366; font-size: 14px; font-weight: bold; padding-bottom: 15px;">-${formatCFA(data.discount)}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="font-weight: bold; font-size: 16px; border-top: 1px solid #eee; padding-top: 15px;">Total Payé</td>
+            <td style="text-align: right; font-weight: bold; font-size: 20px; border-top: 1px solid #eee; padding-top: 15px; color: #000;">${formatCFA(data.total)}</td>
+          </tr>
+        </table>
 
         <!-- Suivi -->
         <div style="margin-top: 30px; text-align: center;">
@@ -211,13 +228,26 @@ export async function sendAdminOrderNotification(data: OrderEmailData) {
           ${itemsHtml}
         </table>
 
-        <!-- Total -->
-        <div style="padding-top: 15px; border-top: 2px dashed #ddd; display: flex; justify-content: space-between;">
-          <table style="width: 100%;"><tr>
-            <td style="font-weight: bold; font-size: 16px;">TOTAL À ENCAISSER</td>
-            <td style="text-align: right; font-weight: black; font-size: 22px; color: #09090b;">${formatCFA(data.total)}</td>
-          </tr></table>
-        </div>
+        <!-- Total Détail Admin -->
+        <table style="width: 100%; margin-bottom: 30px;">
+          <tr>
+            <td style="color: #666; font-size: 14px; padding-bottom: 8px;">Sous-total produits</td>
+            <td style="text-align: right; color: #333; font-size: 14px; font-weight: bold; padding-bottom: 8px;">${formatCFA(data.subtotal)}</td>
+          </tr>
+          <tr>
+            <td style="color: #666; font-size: 14px; padding-bottom: 8px;">Frais de livraison</td>
+            <td style="text-align: right; color: #333; font-size: 14px; font-weight: bold; padding-bottom: 8px;">${formatCFA(data.shippingCost)}</td>
+          </tr>
+          ${data.discount > 0 ? `
+          <tr>
+            <td style="color: #25D366; font-size: 14px; padding-bottom: 15px;">Réduction promo ${data.promoCode ? `[${data.promoCode}]` : ''}</td>
+            <td style="text-align: right; color: #25D366; font-size: 14px; font-weight: bold; padding-bottom: 15px;">-${formatCFA(data.discount)}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="font-weight: bold; font-size: 16px; border-top: 2px dashed #ddd; padding-top: 15px;">TOTAL À ENCAISSER</td>
+            <td style="text-align: right; font-weight: 900; font-size: 22px; color: #09090b; border-top: 2px dashed #ddd; padding-top: 15px;">${formatCFA(data.total)}</td>
+          </tr>
+        </table>
 
         <div style="margin-top: 40px; text-align: center;">
           <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/orders"

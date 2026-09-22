@@ -1,45 +1,43 @@
 import { NextResponse } from 'next/server'
+import * as z from 'zod'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@clerk/nextjs/server'
+import { requireAdmin } from '@/lib/auth'
+import { promoCreateSchema } from '@/lib/validations/promo'
 
 // POST — Créer un nouveau code promo
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
+    const admin = await requireAdmin()
+    if (!admin.ok) return admin.response
+
+    const parsed = promoCreateSchema.safeParse(await req.json())
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation', issues: z.flattenError(parsed.error) },
+        { status: 400 },
+      )
     }
+    const { code, discountPercent, discountAmount, minOrderAmount, maxUses, expiresAt } = parsed.data
+    const normalizedCode = code.toUpperCase().trim()
 
-    const { code, discountPercent, discountAmount, minOrderAmount, maxUses, expiresAt } = await req.json()
-
-    if (!code) {
-      return NextResponse.json({ error: "Le code est requis" }, { status: 400 })
-    }
-
-    if (!discountPercent && !discountAmount) {
-      return NextResponse.json({ error: "Spécifiez un pourcentage ou un montant de réduction" }, { status: 400 })
-    }
-
-    // Vérifier unicité
-    const existing = await prisma.promoCode.findUnique({ where: { code: code.toUpperCase().trim() } })
+    const existing = await prisma.promoCode.findUnique({ where: { code: normalizedCode } })
     if (existing) {
-      return NextResponse.json({ error: "Ce code existe déjà" }, { status: 400 })
+      return NextResponse.json({ error: "Ce code existe déjà" }, { status: 409 })
     }
 
     const promo = await prisma.promoCode.create({
       data: {
-        code: code.toUpperCase().trim(),
-        discountPercent: discountPercent ? Number(discountPercent) : null,
-        discountAmount: discountAmount ? Number(discountAmount) : null,
-        minOrderAmount: minOrderAmount ? Number(minOrderAmount) : null,
-        maxUses: Number(maxUses) || 100,
+        code: normalizedCode,
+        discountPercent: discountPercent ?? null,
+        discountAmount: discountAmount ?? null,
+        minOrderAmount: minOrderAmount ?? null,
+        maxUses,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         isActive: true,
-      }
+      },
     })
 
     return NextResponse.json(promo)
-
   } catch (error) {
     console.error("[PROMO_CREATE]", error)
     return NextResponse.json({ error: "Erreur interne" }, { status: 500 })
@@ -49,10 +47,8 @@ export async function POST(req: Request) {
 // GET — Lister tous les codes promo
 export async function GET() {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
-    }
+    const admin = await requireAdmin()
+    if (!admin.ok) return admin.response
 
     const promos = await prisma.promoCode.findMany({
       orderBy: { createdAt: 'desc' }

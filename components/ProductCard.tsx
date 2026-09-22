@@ -14,6 +14,7 @@ interface ProductWithImages extends Omit<Product, 'price' | 'originalPrice' | 's
   price: number
   originalPrice?: number | null
   stock: number
+  isFreeShipping: boolean
   images: { url: string; color?: string | null }[]
 }
 
@@ -89,7 +90,8 @@ export default function ProductCard({ data }: ProductCardProps) {
       quantity: 1,
       stock: Number(data.stock),
       selectedSize: size,
-      selectedColor: color
+      selectedColor: color,
+      isFreeShipping: data.isFreeShipping
     })
   }
 

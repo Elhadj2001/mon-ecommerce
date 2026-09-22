@@ -32,6 +32,7 @@ const formSchema = z.object({
   colors: z.array(z.string()).min(1, "Au moins une couleur"),
   isFeatured: z.boolean().default(false),
   isArchived: z.boolean().default(false),
+  isFreeShipping: z.boolean().default(false),
 })
 
 type ProductFormValues = z.infer<typeof formSchema>
@@ -92,6 +93,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
     colors: initialData.colors || [],
     // @ts-ignore
     gender: initialData.gender || 'Unisexe', 
+    isFreeShipping: initialData.isFreeShipping || false,
   } : {
     name: '', 
     images: [], 
@@ -105,6 +107,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
     colors: [], 
     isFeatured: false, 
     isArchived: false,
+    isFreeShipping: false,
   }
 
   const form = useForm<ProductFormValues>({
@@ -377,6 +380,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
                         <label className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition">
                             <span className="text-sm font-medium text-gray-700">Archivé (Caché)</span>
                             <input type="checkbox" {...form.register("isArchived")} className="w-5 h-5 accent-red-500 cursor-pointer" />
+                        </label>
+
+                        <label className="flex items-center justify-between p-3 border border-green-200 bg-green-50 rounded-lg cursor-pointer transition">
+                            <span className="text-sm font-bold text-green-700">Livraison Gratuite (Sénégal)</span>
+                            <input type="checkbox" {...form.register("isFreeShipping")} className="w-5 h-5 accent-green-600 cursor-pointer" />
                         </label>
                     </div>
                 </div>

@@ -11,6 +11,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 
 interface ProductClientProps {
   product: Product & {
+    isFreeShipping: boolean
     images: { url: string; color?: string | null }[]
     category: { name: string }
   }
@@ -82,7 +83,8 @@ export default function ProductClient({ product }: ProductClientProps) {
       quantity: 1,
       stock: stock,
       selectedSize: selectedSize,
-      selectedColor: selectedColor
+      selectedColor: selectedColor,
+      isFreeShipping: product.isFreeShipping
     })
     
     // Ouvre immédiatement le panier

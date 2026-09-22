@@ -76,25 +76,39 @@ export default function CheckoutPage() {
     return total + Number(item.price) * item.quantity
   }, 0)
 
-  // Frais de livraison automatiques selon la ville
+  // Calcul des frais de livraison automatiques
   const city = formData.city.toLowerCase().trim()
   let shippingEur = 0
   let shippingLabel = 'Sélectionnez une ville'
+  
+  // Vérifier si le panier contient au moins un article avec la livraison gratuite
+  const hasFreeShippingItem = cart.items.some(item => item.isFreeShipping)
+
   if (city) {
     if (city === 'dakar' || city.includes('dakar')) {
       shippingEur = 0
       shippingLabel = 'Gratuite (Dakar)'
-    } else if (['thiès', 'thies', 'saint-louis', 'saint louis', 'kaolack', 'ziguinchor', 'mbour', 'touba', 'rufisque', 'diourbel', 'tambacounda', 'louga', 'matam', 'fatick', 'kolda', 'kédougou', 'kedougou', 'sédhiou', 'sedhiou', 'kaffrine'].some(v => city.includes(v))) {
-      shippingEur = 4.57 // ~3000 FCFA
-      shippingLabel = `${convertToXof(4.57).toLocaleString('fr-FR')} FCFA (Sénégal)`
+    } else if (['thiès', 'thies', 'saint-louis', 'saint louis', 'kaolack', 'ziguinchor', 'mbour', 'touba', 'rufisque', 'diourbel', 'tambacounda', 'louga', 'matam', 'fatick', 'kolda', 'kédougou', 'kedougou', 'sédhiou', 'sedhiou', 'kaffrine', 'senegal', 'sénégal'].some(v => city.includes(v))) {
+      // Si la livraison est gratuite et que le client est au Sénégal
+      if (hasFreeShippingItem) {
+        shippingEur = 0
+        shippingLabel = 'Gratuite 🎉'
+      } else {
+        shippingEur = 4.57 // ~3000 FCFA
+        shippingLabel = `${convertToXof(4.57).toLocaleString('fr-FR')} FCFA (Sénégal)`
+      }
     } else {
+      // International = toujours payant (sauf si explicitement gratuit ?)
+      // Ici, on part du principe que la gratuité c'est pour le Sénégal.
       shippingEur = 22.87 // ~15000 FCFA
       shippingLabel = `${convertToXof(22.87).toLocaleString('fr-FR')} FCFA (International)`
     }
   }
 
   const discountEur = appliedPromo?.discountEur || 0
-  const grandTotalEur = Math.max(0, subtotalEur + shippingEur - discountEur)
+  // Le discount s'applique UNIQUEMENT sur les produits, pas la livraison
+  const finalSubtotalEur = Math.max(0, subtotalEur - discountEur)
+  const grandTotalEur = finalSubtotalEur + shippingEur
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })

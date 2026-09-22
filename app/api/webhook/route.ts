@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { sendOrderEmail, sendAdminAlertEmail } from '@/lib/mail'
+import { logger } from '@/lib/logger'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-12-15.clover' })
 
@@ -30,53 +32,73 @@ export async function POST(req: NextRequest) {
     const customerEmail = session.customer_details?.email
 
     if (!orderId) {
-      console.error('[WEBHOOK] orderId manquant dans les metadata')
+      console.error('[WEBHOOK] orderId manquant dans les metadata', { eventId: event.id })
       return NextResponse.json({ error: 'orderId missing' }, { status: 400 })
     }
 
-    // 1. Mettre à jour la commande
-    const updatedOrder = await prisma.order.update({
+    // Idempotence : si la commande est déjà payée, on ne refait pas le décrément stock.
+    const existing = await prisma.order.findUnique({
       where: { id: orderId },
-      data: {
-        isPaid: true,
-        address: session.customer_details?.address
-          ? `${session.customer_details.address.line1}, ${session.customer_details.address.city}, ${session.customer_details.address.country}`
-          : '',
-        phone: session.customer_details?.phone || '',
-      },
-      include: {
-        orderItems: {
-          include: { product: true }
+      select: { id: true, isPaid: true },
+    })
+    if (!existing) {
+      console.error('[WEBHOOK] Commande introuvable', { orderId, eventId: event.id })
+      return NextResponse.json({ error: 'order not found' }, { status: 404 })
+    }
+    if (existing.isPaid) {
+      logger.info(`[WEBHOOK] Commande ${orderId} déjà traitée (idempotence)`)
+      return NextResponse.json({ received: true, duplicate: true })
+    }
+
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.update({
+        where: { id: orderId },
+        data: {
+          isPaid: true,
+          address: session.customer_details?.address
+            ? `${session.customer_details.address.line1}, ${session.customer_details.address.city}, ${session.customer_details.address.country}`
+            : '',
+          phone: session.customer_details?.phone || '',
+        },
+        include: {
+          orderItems: { include: { product: true } },
+        },
+      })
+
+      for (const item of order.orderItems) {
+        const result = await tx.product.updateMany({
+          where: { id: item.productId, stock: { gte: item.quantity } },
+          data: { stock: { decrement: item.quantity } },
+        })
+        if (result.count === 0) {
+          // Stock épuisé entre temps : on log mais on n'échoue pas le paiement Stripe.
+          console.warn('[WEBHOOK] Stock négatif évité', {
+            orderId,
+            productId: item.productId,
+            requested: item.quantity,
+          })
         }
       }
-    })
 
-    // 2. Décrémenter le stock
-    for (const item of updatedOrder.orderItems) {
-      await prisma.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } }
-      })
-    }
+      return order
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted })
 
-    // 3. Calculer le total
     const totalEUR = updatedOrder.orderItems.reduce(
-      (acc, item) => acc + Number(item.product.price) * item.quantity,
-      0
+      (acc, item) => acc + Number(item.product.price) * item.quantity, 0,
     )
 
-    // 4. Envoyer email de confirmation au CLIENT
     if (customerEmail) {
-      await sendOrderEmail(customerEmail, orderId, totalEUR)
+      try { await sendOrderEmail(customerEmail, orderId, totalEUR) }
+      catch (e) { console.error('[WEBHOOK_EMAIL_CUSTOMER]', e) }
     }
 
-    // 5. Envoyer alerte au PROPRIÉTAIRE (email admin Hostinger)
     const adminEmail = process.env.ADMIN_EMAIL
     if (adminEmail) {
-      await sendAdminAlertEmail(adminEmail, orderId, totalEUR, customerEmail || 'Inconnu', updatedOrder.orderItems)
+      try { await sendAdminAlertEmail(adminEmail, orderId, totalEUR, customerEmail || 'Inconnu', updatedOrder.orderItems) }
+      catch (e) { console.error('[WEBHOOK_EMAIL_ADMIN]', e) }
     }
 
-    console.log(`[WEBHOOK] ✅ Commande ${orderId} traitée avec succès.`)
+    logger.info(`[WEBHOOK] Commande ${orderId} traitée avec succès.`)
   }
 
   return NextResponse.json({ received: true })

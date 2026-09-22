@@ -11,6 +11,7 @@ export interface CartItem {
   stock: number // Ajout de la limite de stock
   selectedSize?: string
   selectedColor?: string
+  isFreeShipping?: boolean // ✅ Pour la logique de livraison gratuite
   cartId: string
 }
 

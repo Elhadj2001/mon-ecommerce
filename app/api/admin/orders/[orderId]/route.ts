@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@clerk/nextjs/server'
+import { requireAdmin } from '@/lib/auth'
 import { sendOrderStatusEmail } from '@/lib/send-order-email'
 
 const VALID_STATUSES = ['PENDING', 'PAYMENT_RECEIVED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
@@ -10,10 +10,8 @@ export async function PATCH(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return new NextResponse("Non autorisé", { status: 401 })
-    }
+    const admin = await requireAdmin()
+    if (!admin.ok) return admin.response
 
     const { orderId } = await params
     const body = await req.json()
@@ -42,6 +40,11 @@ export async function PATCH(
     )
 
     // Envoi du mail automatique au client
+    const subtotal = total
+    const shippingCost = Number(order.shippingCost) || 0
+    const discount = Number(order.discount) || 0
+    const finalTotal = Math.max(0, subtotal + shippingCost - discount)
+
     await sendOrderStatusEmail({
       orderId: order.id,
       customerName: order.name,
@@ -49,7 +52,11 @@ export async function PATCH(
       customerPhone: order.phone,
       status: order.status,
       paymentMethod: order.paymentMethod,
-      total,
+      total: finalTotal,
+      subtotal,
+      shippingCost,
+      discount,
+      promoCode: order.promoCode,
       items: order.orderItems.map(item => ({
         name: item.product.name,
         quantity: item.quantity,

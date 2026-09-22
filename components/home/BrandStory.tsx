@@ -111,7 +111,7 @@ export default function BrandStory() {
                 <em className="text-white/50">Takusanu Ndar</em> — « la beauté de Saint-Louis » —
                 c'est cette essence que <strong className="text-white/70">Maison Niang</strong> distille
                 dans chaque création. L'élégance naturelle, le tissu qui ondule comme la mer,
-                les couleurs qui parlent de la terre et du ciel de Dakar.
+                les couleurs qui parlent de la terre et du ciel de Ndar.
               </p>
               <p className="text-white/35 leading-relaxed text-sm">
                 Nous créons pour celles et ceux qui portent leur culture comme une couronne.

@@ -15,7 +15,7 @@ export default async function SearchPage({
         { description: { contains: q, mode: 'insensitive' } },
       ],
     },
-    include: { category: true }
+    include: { category: true, images: true }
   })
 
   return (
@@ -31,7 +31,7 @@ export default async function SearchPage({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {products.map((product) => (
-            <ProductCard key={product.id} data={{...product, price: product.price.toNumber()}} />
+            <ProductCard key={product.id} data={{...product, price: product.price.toNumber(), originalPrice: product.originalPrice ? product.originalPrice.toNumber() : null}} />
           ))}
         </div>
       )}

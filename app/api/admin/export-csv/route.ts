@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth'
 
 export async function GET() {
+  const admin = await requireAdmin()
+  if (!admin.ok) return admin.response
+
   // On récupère toutes les commandes PAYÉES
   const orders = await prisma.order.findMany({
     where: { isPaid: true },

@@ -1,61 +1,60 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server"; 
+import * as z from "zod";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
+import { productUpdateSchema } from "@/lib/validations/product";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ storeId: string; productId: string }> }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
   try {
     const { productId } = await params;
-    const { userId } = await auth();
-    
-    if (!userId) return new NextResponse("Unauthenticated", { status: 403 });
-
-    const body = await req.json();
-    const { 
-      name, price, originalPrice, categoryId, images, colors, sizes, 
-      isFeatured, isArchived, description, stock, gender 
-    } = body;
+    const admin = await requireAdmin();
+    if (!admin.ok) return admin.response;
 
     if (!productId) return new NextResponse("Product ID required", { status: 400 });
 
-    // --- SECURITÉ SUPPLEMENTAIRE ---
-    if (stock !== undefined && Number(stock) < 0) {
-        return new NextResponse("Le stock ne peut pas être négatif", { status: 400 });
+    const parsed = productUpdateSchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation', issues: z.flattenError(parsed.error) },
+        { status: 400 },
+      );
     }
-    // ------------------------------
+    const {
+      name, price, originalPrice, categoryId, images, colors, sizes,
+      isFeatured, isArchived, isFreeShipping, description, stock, gender,
+    } = parsed.data;
 
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
       data: {
-        name: name || undefined,
-        price: price ? Number(price) : undefined,
-        originalPrice: originalPrice ? Number(originalPrice) : undefined,
-        categoryId: categoryId || undefined,
-        colors: colors || undefined,
-        sizes: sizes || undefined,
-        description: description || undefined,
+        name: name ?? undefined,
+        price: price !== undefined ? Number(price) : undefined,
+        originalPrice: originalPrice !== undefined && originalPrice !== null ? Number(originalPrice) : undefined,
+        categoryId: categoryId ?? undefined,
+        colors: colors ?? undefined,
+        sizes: sizes ?? undefined,
+        description: description ?? undefined,
         stock: stock !== undefined ? Number(stock) : undefined,
-        gender: gender || undefined,
-        isFeatured: isFeatured !== undefined ? isFeatured : undefined,
-        isArchived: isArchived !== undefined ? isArchived : undefined,
-        images: (images && images.length > 0) ? {
+        gender: gender ?? undefined,
+        isFeatured: isFeatured ?? undefined,
+        isArchived: isArchived ?? undefined,
+        isFreeShipping: isFreeShipping ?? undefined,
+        images: images && images.length > 0 ? {
           deleteMany: {},
           createMany: {
-            data: [
-                ...images.map((image: { url: string; color?: string }) => ({
-                    url: image.url,
-                    color: image.color || null
-                }))
-            ]
-          }
+            data: images.map((image) => ({
+              url: image.url,
+              color: image.color ?? null,
+            })),
+          },
         } : undefined,
       },
     });
 
     return NextResponse.json(updatedProduct);
-    
   } catch (error) {
     console.error("[PRODUCT_PATCH]", error);
     return new NextResponse("Internal Error", { status: 500 });
@@ -67,12 +66,11 @@ export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ productId: string }> }
 ) {
-  /* ... Code inchangé ... */
   try {
     const { productId } = await params;
-    const { userId } = await auth();
+    const admin = await requireAdmin();
+    if (!admin.ok) return admin.response;
 
-    if (!userId) return new NextResponse("Unauthenticated", { status: 403 });
     if (!productId) return new NextResponse("Product id is required", { status: 400 });
 
     const product = await prisma.product.delete({

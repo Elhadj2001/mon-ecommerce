@@ -17,6 +17,7 @@ interface Product {
   isArchived: boolean
   isFeatured: boolean
   categoryId: string
+  isFreeShipping: boolean
   createdAt: Date
   updatedAt: Date
   description: string

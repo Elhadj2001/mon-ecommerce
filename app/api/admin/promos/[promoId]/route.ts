@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@clerk/nextjs/server'
+import { requireAdmin } from '@/lib/auth'
 
 // DELETE — Supprimer un code promo
 export async function DELETE(
@@ -8,10 +8,8 @@ export async function DELETE(
   { params }: { params: Promise<{ promoId: string }> }
 ) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
-    }
+    const admin = await requireAdmin()
+    if (!admin.ok) return admin.response
 
     const { promoId } = await params
 
@@ -32,10 +30,8 @@ export async function PATCH(
   { params }: { params: Promise<{ promoId: string }> }
 ) {
   try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
-    }
+    const admin = await requireAdmin()
+    if (!admin.ok) return admin.response
 
     const { promoId } = await params
     const body = await req.json()

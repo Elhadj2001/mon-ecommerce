@@ -34,6 +34,7 @@ model Product {
 
   isFeatured    Boolean   @default(false)
   isArchived    Boolean   @default(false)
+  isFreeShipping Boolean  @default(false) // ✅ Ajout pour livraison gratuite
   
   sizes         String[]
   colors        String[]
@@ -47,6 +48,9 @@ model Product {
   updatedAt     DateTime  @updatedAt
 
   @@index([categoryId])
+  @@index([isFeatured])
+  @@index([isArchived])
+  @@index([gender])
 }
 
 model Category {
@@ -105,6 +109,12 @@ model Order {
   discount      Decimal        @default(0)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([clerkUserId])
+  @@index([status])
+  @@index([isPaid])
+  @@index([createdAt])
 }
 
 model OrderItem {
@@ -149,5 +159,8 @@ model Review {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([productId, clerkUserId])
   @@index([productId])
+  @@index([clerkUserId])
+  @@index([isApproved])
 }

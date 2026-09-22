@@ -1,22 +1,78 @@
 import { NextResponse } from 'next/server'
+import * as z from 'zod'
 import { prisma } from '@/lib/prisma'
-import { auth } from '@clerk/nextjs/server'
+import { requireAdmin } from '@/lib/auth'
+import { productSchema } from '@/lib/validations/product'
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const page = Math.max(1, Number(searchParams.get('page')) || 1)
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get('pageSize')) || 24))
+    const categoryId = searchParams.get('categoryId') || undefined
+    const isFeatured = searchParams.get('isFeatured')
+    const gender = searchParams.get('gender') || undefined
+    const q = searchParams.get('q')?.trim() || undefined
+
+    const where = {
+      isArchived: false,
+      ...(categoryId ? { categoryId } : {}),
+      ...(isFeatured === 'true' ? { isFeatured: true } : {}),
+      ...(gender ? { gender } : {}),
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: 'insensitive' as const } },
+              { description: { contains: q, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    }
+
+    const [total, items] = await prisma.$transaction([
+      prisma.product.count({ where }),
+      prisma.product.findMany({
+        where,
+        include: { images: true, category: true },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ])
+
+    return NextResponse.json({
+      items,
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    })
+  } catch (error) {
+    console.error('[PRODUCTS_GET]', error)
+    return NextResponse.json({ error: 'Erreur interne' }, { status: 500 })
+  }
+}
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth(); 
-    
-    const body = await req.json()
-    const { 
-      name, price, originalPrice, stock, categoryId, 
-      images, sizes, colors, description, 
-      isFeatured, isArchived, gender 
-    } = body
+    const admin = await requireAdmin()
+    if (!admin.ok) return admin.response
 
-    if (!userId) return new NextResponse("Unauthenticated", { status: 403 });
-    if (!name || !price || !categoryId || !images || !images.length) {
-      return new NextResponse("Données manquantes", { status: 400 })
+    const json = await req.json()
+    const parsed = productSchema.safeParse(json)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation', issues: z.flattenError(parsed.error) },
+        { status: 400 },
+      )
     }
+
+    const {
+      name, price, originalPrice, stock, categoryId,
+      images, sizes, colors, description,
+      isFeatured, isArchived, gender,
+    } = parsed.data
+    const isFreeShipping = (json as { isFreeShipping?: boolean }).isFreeShipping ?? false
 
     // Gestion intelligente de la catégorie (Simplifiée sans storeId)
     let finalCategoryId = categoryId
@@ -46,6 +102,7 @@ export async function POST(req: Request) {
         description: description || "",
         isFeatured: !!isFeatured,
         isArchived: !!isArchived,
+        isFreeShipping: !!isFreeShipping,
         gender: gender || "Unisexe",
         sizes: sizes || [],
         colors: colors || [],
@@ -58,9 +115,9 @@ export async function POST(req: Request) {
         
         images: {
           createMany: {
-            data: images.map((image: { url: string; color?: string }) => ({
+            data: images.map((image) => ({
               url: image.url,
-              color: image.color || null
+              color: image.color ?? null,
             }))
           }
         }
@@ -70,7 +127,7 @@ export async function POST(req: Request) {
     return NextResponse.json(product)
 
   } catch (error) {
-    console.log('[PRODUCTS_POST]', error)
+    console.error('[PRODUCTS_POST]', error)
     return new NextResponse("Erreur création", { status: 500 })
   }
 }
