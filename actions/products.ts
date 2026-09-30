@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { productSchema, ProductFormValues } from '@/lib/validations/product'
+import { requireAdmin } from '@/lib/auth'
 
 export interface GetProductsParams {
   categoryId?: string
@@ -85,6 +86,9 @@ export async function getProduct(id: string) {
 }
 
 export async function createProduct(formData: ProductFormValues) {
+  const admin = await requireAdmin()
+  if (!admin.ok) throw new Error('Accès refusé')
+
   try {
     // 1. Validation de sécurité Zod côté serveur
     const validatedData = productSchema.parse(formData)
@@ -127,6 +131,9 @@ export async function createProduct(formData: ProductFormValues) {
 }
 
 export async function updateProduct(productId: string, formData: ProductFormValues) {
+  const admin = await requireAdmin()
+  if (!admin.ok) throw new Error('Accès refusé')
+
   try {
     // 1. Validation de sécurité Zod côté serveur
     const validatedData = productSchema.parse(formData)
@@ -174,6 +181,9 @@ export async function updateProduct(productId: string, formData: ProductFormValu
 }
 
 export async function deleteProduct(formData: FormData) {
+  const admin = await requireAdmin()
+  if (!admin.ok) throw new Error('Accès refusé')
+
   const productId = formData.get('productId') as string
 
   if (!productId) return
