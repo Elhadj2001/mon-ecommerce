@@ -22,7 +22,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-[#f8f8f8] dark:bg-[#0d0d0f]">
+    <div className="flex h-dvh bg-[#f8f8f8] dark:bg-[#0d0d0f]">
 
       {/* OVERLAY MOBILE */}
       {isMobileOpen && (
