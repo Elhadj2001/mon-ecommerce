@@ -77,7 +77,9 @@ export default function CheckoutPage() {
     email: "",
     phone: "",
     address: "",
-    city: ""
+    city: "",
+    country: "",
+    foreignCity: ""
   })
 
   useEffect(() => {
@@ -287,6 +289,39 @@ export default function CheckoutPage() {
                       ))}
                     </select>
                   </div>
+
+                  {/* Hors Sénégal : pays et ville obligatoires pour que la commande reste livrable */}
+                  {zone && !zone.inSenegal && (
+                    <>
+                      <div>
+                        <label htmlFor="country" className="block text-sm font-bold text-gray-700 mb-2">Pays *</label>
+                        <input
+                          id="country"
+                          type="text"
+                          name="country"
+                          required
+                          value={formData.country}
+                          onChange={handleChange}
+                          placeholder="Ex: France"
+                          className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground placeholder:text-muted-foreground"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="foreignCity" className="block text-sm font-bold text-gray-700 mb-2">Ville *</label>
+                        <input
+                          id="foreignCity"
+                          type="text"
+                          name="foreignCity"
+                          required
+                          value={formData.foreignCity}
+                          onChange={handleChange}
+                          placeholder="Ex: Paris"
+                          className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground placeholder:text-muted-foreground"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 

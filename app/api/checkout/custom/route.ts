@@ -3,7 +3,7 @@ import * as z from 'zod'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@clerk/nextjs/server'
-import { customCheckoutSchema } from '@/lib/validations/checkout'
+import { customCheckoutSchema, INTERNATIONAL_DESTINATION } from '@/lib/validations/checkout'
 import { rateLimit } from '@/lib/rate-limit'
 
 class CheckoutBusinessError extends Error {
@@ -28,6 +28,11 @@ export async function POST(req: Request) {
       )
     }
     const { items, customer, paymentMethod, promoCode, discount, shippingCost } = parsed.data
+
+    // Hors Sénégal, la ville et le pays saisis remplacent la valeur de la liste
+    const destination = customer.city === INTERNATIONAL_DESTINATION
+      ? `${customer.foreignCity}, ${customer.country}`
+      : customer.city
 
     const productIds = items.map((item) => item.id)
 
@@ -107,7 +112,7 @@ export async function POST(req: Request) {
           name: customer.name,
           email: customer.email || "",
           phone: customer.phone,
-          address: `${customer.address || ''} ${customer.city || ''}`.trim(),
+          address: `${customer.address || ''} ${destination || ''}`.trim(),
           paymentMethod,
           status: 'PENDING',
           promoCode: promoCode || null,

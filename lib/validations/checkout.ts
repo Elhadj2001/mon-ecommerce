@@ -16,12 +16,18 @@ export type CheckoutValues = z.infer<typeof checkoutSchema>
 export const PAYMENT_METHODS = ['WAVE', 'ORANGE_MONEY', 'CASH_ON_DELIVERY', 'PAYPAL'] as const
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number]
 
+// Valeur de la liste « Ville / Région » du checkout pour une livraison à l'étranger
+export const INTERNATIONAL_DESTINATION = 'Hors Sénégal'
+
 export const customerSchema = z.object({
   name: z.string().min(2, "Nom trop court").max(100),
   phone: z.string().min(6, "Numéro invalide").max(30),
   email: z.email().optional().or(z.literal('')),
   address: z.string().max(300).optional(),
   city: z.string().max(100).optional(),
+  // Destination précise, exigée uniquement pour une livraison hors Sénégal
+  country: z.string().trim().max(100).optional(),
+  foreignCity: z.string().trim().max(100).optional(),
 })
 
 export const customCheckoutSchema = z
@@ -36,6 +42,14 @@ export const customCheckoutSchema = z
   .refine(
     (data) => data.paymentMethod !== 'CASH_ON_DELIVERY' || (data.customer.address && data.customer.address.length > 0),
     { message: "Adresse requise pour le paiement à la livraison", path: ['customer', 'address'] },
+  )
+  .refine(
+    (data) => data.customer.city !== INTERNATIONAL_DESTINATION || !!data.customer.country,
+    { message: "Pays requis pour une livraison hors Sénégal", path: ['customer', 'country'] },
+  )
+  .refine(
+    (data) => data.customer.city !== INTERNATIONAL_DESTINATION || !!data.customer.foreignCity,
+    { message: "Ville requise pour une livraison hors Sénégal", path: ['customer', 'foreignCity'] },
   )
 
 export type CustomCheckoutValues = z.infer<typeof customCheckoutSchema>
