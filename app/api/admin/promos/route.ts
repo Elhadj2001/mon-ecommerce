@@ -32,7 +32,7 @@ export async function POST(req: Request) {
         discountAmount: discountAmount ?? null,
         minOrderAmount: minOrderAmount ?? null,
         maxUses,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        expiresAt: expiresAt ?? null,
         isActive: true,
       },
     })

@@ -7,7 +7,7 @@ export const promoCreateSchema = z
     discountAmount: z.coerce.number().min(0.01).optional().nullable(),
     minOrderAmount: z.coerce.number().min(0).optional().nullable(),
     maxUses: z.coerce.number().int().min(1).max(100000).default(100),
-    expiresAt: z.string().datetime().optional().nullable(),
+    expiresAt: z.coerce.date().optional().nullable(),
   })
   .refine((d) => d.discountPercent || d.discountAmount, {
     message: "Spécifiez un pourcentage ou un montant de réduction",

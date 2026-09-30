@@ -31,7 +31,7 @@ export async function requireAdmin(): Promise<AdminCheckResult> {
   if (!(await isAdminUser(userId))) {
     return {
       ok: false,
-      response: NextResponse.json({ error: 'Accès refusé : droits admin requis' }, { status: 403 }),
+      response: NextResponse.json({ error: 'Accès refusé : droits admin requis (vérification serveur)' }, { status: 403 }),
     }
   }
 
