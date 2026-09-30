@@ -144,7 +144,8 @@ export async function updateProduct(productId: string, formData: ProductFormValu
         name: validatedData.name,
         description: validatedData.description,
         price: validatedData.price,
-        originalPrice: validatedData.originalPrice || null,
+        // Champ absent : prix barré inchangé ; champ vidé (null ou 0) : prix barré effacé
+        originalPrice: validatedData.originalPrice === undefined ? undefined : validatedData.originalPrice || null,
         stock: validatedData.stock,
         categoryId: validatedData.categoryId,
         gender: validatedData.gender, 

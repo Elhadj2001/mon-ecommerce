@@ -132,7 +132,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
 
       // 1. CONVERSION INVERSE : L'admin a saisi 10000 FCFA, on divise pour avoir des Euros
       const priceInEur = data.price / EXCHANGE_RATE;
-      const originalPriceInEur = data.originalPrice ? (data.originalPrice / EXCHANGE_RATE) : undefined;
+      // Champ vidé : null explicite pour effacer le prix barré en base
+      const originalPriceInEur = data.originalPrice ? (data.originalPrice / EXCHANGE_RATE) : null;
 
       // 2. On prépare le payload avec les prix en Euros pour la DB
       const payload = { 

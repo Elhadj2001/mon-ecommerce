@@ -32,7 +32,8 @@ export async function PATCH(
       data: {
         name: name ?? undefined,
         price: price !== undefined ? Number(price) : undefined,
-        originalPrice: originalPrice !== undefined && originalPrice !== null ? Number(originalPrice) : undefined,
+        // Champ absent : prix barré inchangé ; champ vidé (null ou 0) : prix barré effacé
+        originalPrice: originalPrice === undefined ? undefined : originalPrice ? Number(originalPrice) : null,
         categoryId: categoryId ?? undefined,
         colors: colors ?? undefined,
         sizes: sizes ?? undefined,

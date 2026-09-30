@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useCart } from "@/hooks/use-cart"
 import { useRouter } from "next/navigation"
-import { formatPrice, convertToXof } from "@/lib/currency"
+import { formatPrice, EXCHANGE_RATE } from "@/lib/currency"
 import { CustomImage } from "@/components/ui/CustomImage"
 import { ShieldCheck, Truck, ArrowRight, Loader2, Smartphone, Wallet, CheckCircle2, Tag, X } from "lucide-react"
 import toast from "react-hot-toast"
@@ -38,23 +38,24 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; description: strin
   },
 ]
 
-// Zones de livraison : le tarif se déduit de la région choisie dans la liste
-const SHIPPING_ZONES: { group: string; feeEur: number; inSenegal: boolean; regions: string[] }[] = [
+// Zones de livraison : le tarif se déduit de la région choisie dans la liste.
+// Tarifs définis en FCFA, monnaie du client ; l'équivalent en euros est dérivé pour la base.
+const SHIPPING_ZONES: { group: string; feeXof: number; inSenegal: boolean; regions: string[] }[] = [
   {
     group: 'Dakar',
-    feeEur: 0,
+    feeXof: 0,
     inSenegal: true,
     regions: ['Dakar', 'Pikine', 'Guédiawaye', 'Rufisque', 'Keur Massar'],
   },
   {
     group: 'Autres régions du Sénégal',
-    feeEur: 4.57, // ~3000 FCFA
+    feeXof: 3000,
     inSenegal: true,
     regions: ['Thiès', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kédougou', 'Kolda', 'Louga', 'Matam', 'Saint-Louis', 'Sédhiou', 'Tambacounda', 'Ziguinchor'],
   },
   {
     group: 'Hors Sénégal',
-    feeEur: 22.87, // ~15000 FCFA
+    feeXof: 15000,
     inSenegal: false,
     regions: ['Hors Sénégal'],
   },
@@ -109,15 +110,16 @@ export default function CheckoutPage() {
   const hasFreeShippingItem = cart.items.some(item => item.isFreeShipping)
 
   if (zone) {
-    if (zone.feeEur === 0) {
+    if (zone.feeXof === 0) {
       shippingLabel = 'Gratuite (Dakar)'
     } else if (zone.inSenegal && hasFreeShippingItem) {
       // Si la livraison est gratuite et que le client est au Sénégal
       shippingLabel = 'Gratuite 🎉'
     } else {
       // International = toujours payant : la gratuité est réservée au Sénégal
-      shippingEur = zone.feeEur
-      shippingLabel = `${convertToXof(zone.feeEur).toLocaleString('fr-FR')} FCFA (${zone.inSenegal ? 'Sénégal' : 'International'})`
+      // Montant envoyé à l'API en euros, comme le reste de la base
+      shippingEur = zone.feeXof / EXCHANGE_RATE
+      shippingLabel = `${zone.feeXof.toLocaleString('fr-FR')} FCFA (${zone.inSenegal ? 'Sénégal' : 'International'})`
     }
   }
 
