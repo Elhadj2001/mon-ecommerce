@@ -205,7 +205,7 @@ export default function CartClient() {
             
             <div className="flex items-center justify-between pt-2">
                <div className="text-sm text-gray-500">Livraison</div>
-               <div className="text-sm font-medium text-green-600">Offerte</div>
+               <div className="text-sm font-medium text-gray-500">Calculée à l&apos;étape suivante</div>
             </div>
           </div>
 

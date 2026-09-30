@@ -12,6 +12,9 @@ function useFloatingOnLeft() {
   return usePathname() === '/cart'
 }
 
+// Message prérempli de la conversation WhatsApp
+const WHATSAPP_MESSAGE = encodeURIComponent("Bonjour Maison Niang, j'ai une question !")
+
 export function BackToTop() {
   const onLeft = useFloatingOnLeft()
   const [visible, setVisible] = useState(false)
@@ -50,7 +53,7 @@ export function FloatingWhatsApp({ phone = '221770000000' }: { phone?: string })
 
   return (
     <motion.a
-      href={`https://wa.me/${phone}?text=Bonjour%20Monsoon%2C%20j%27ai%20une%20question%20!`}
+      href={`https://wa.me/${phone}?text=${WHATSAPP_MESSAGE}`}
       target="_blank"
       rel="noopener noreferrer"
       className={`fixed bottom-24 ${onLeft ? 'left-6' : 'right-6'} z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl cursor-pointer`}
