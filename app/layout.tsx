@@ -1,15 +1,10 @@
 import type { Metadata } from 'next'
 import { Outfit } from 'next/font/google'
 import './globals.css'
-import Navbar from '@/components/Navbar'
-import Footer from '@/components/Footer'
 import { ClerkProvider } from '@clerk/nextjs'
 import { frFR } from "@clerk/localizations"
 import { Toaster } from 'react-hot-toast'
 import { ThemeProvider } from '@/components/ThemeProvider'
-import { CartSlideover } from '@/components/CartSlideover'
-import ClientOnlyComponents from '@/components/ClientOnlyComponents'
-import { AnnouncementBar } from '@/components/AnnouncementBar'
 
 const outfit = Outfit({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -45,9 +40,6 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {/* Composants dynamiques client-only (Preloader, Cursor, Scroll, Floating Buttons) */}
-            <ClientOnlyComponents phone="221781737959" />
-
             <Toaster
               position="bottom-right"
               toastOptions={{
@@ -62,19 +54,8 @@ export default function RootLayout({
                 }
               }}
             />
-            
-            <div className="flex min-h-screen flex-col">
-              <AnnouncementBar />
-              <Navbar />
-              <main className="flex-grow">
-                {children}
-              </main>
-              <Footer />
-            </div>
 
-            <CartSlideover />
-
-
+            {children}
           </ThemeProvider>
         </body>
       </html>
