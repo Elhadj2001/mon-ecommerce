@@ -154,7 +154,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({ initialData, categorie
       toast.success("Produit enregistré !")
     } catch (error) {
       console.error(error)
-      toast.error("Une erreur est survenue.")
+      // Affiche le message de validation renvoyé par l'API (ex. prix barré), sinon un message générique
+      const fieldErrors: Record<string, string[]> | undefined = axios.isAxiosError(error)
+        ? error.response?.data?.issues?.fieldErrors
+        : undefined
+      const validationMessage = fieldErrors ? Object.values(fieldErrors).flat()[0] : undefined
+      toast.error(validationMessage || "Une erreur est survenue.")
     } finally {
       setLoading(false)
     }

@@ -7,6 +7,7 @@ import { Truck, ShieldCheck, ShoppingBag, Check, AlertCircle, XCircle, ArrowRigh
 import { useCart } from '@/hooks/use-cart'
 import { formatPrice } from '@/lib/currency'
 import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 
 interface ProductClientProps {
@@ -35,17 +36,14 @@ const colorMap: Record<string, string> = {
 }
 
 export default function ProductClient({ product }: ProductClientProps) {
-  const [selectedSize, setSelectedSize] = useState('')
-  const [selectedColor, setSelectedColor] = useState('')
+  // Variante unique présélectionnée d'office (taille comme couleur)
+  const [selectedSize, setSelectedSize] = useState(product.sizes.length === 1 ? product.sizes[0] : '')
+  const [selectedColor, setSelectedColor] = useState(product.colors.length === 1 ? product.colors[0] : '')
   const [mainImage, setMainImage] = useState(product.images[0]?.url)
   const cart = useCart()
 
-  // Initialisation automatique de la taille si uen seule taille dispo
-  useEffect(() => {
-    if (product.sizes.length === 1 && !selectedSize) {
-      setSelectedSize(product.sizes[0])
-    }
-  }, [product.sizes])
+  // Prix barré affiché uniquement pour une vraie réduction
+  const hasPromo = product.originalPrice !== null && Number(product.originalPrice) > Number(product.price)
 
   // --- LOGIQUE DE STOCK ---
   const stock = Number(product.stock)
@@ -72,8 +70,14 @@ export default function ProductClient({ product }: ProductClientProps) {
   const handleAddToCart = () => {
     if (isOutOfStock) return
 
-    if (product.sizes.length > 0 && !selectedSize) return alert('Veuillez choisir une taille')
-    if (product.colors.length > 0 && !selectedColor) return alert('Veuillez choisir une couleur')
+    if (product.sizes.length > 0 && !selectedSize) {
+      toast.error('Veuillez choisir une taille')
+      return
+    }
+    if (product.colors.length > 0 && !selectedColor) {
+      toast.error('Veuillez choisir une couleur')
+      return
+    }
 
     cart.addItem({
       id: product.id,
@@ -171,7 +175,7 @@ export default function ProductClient({ product }: ProductClientProps) {
               {/* Prix & Badges */}
               <div className="mt-4 flex flex-col items-start gap-4 border-b border-border pb-6">
                 <div className="flex items-center gap-4">
-                    {product.originalPrice ? (
+                    {hasPromo ? (
                        <div className="flex items-end gap-3">
                            <span className="text-4xl font-black text-destructive">{formatPrice(Number(product.price))}</span>
                            <span className="text-xl font-medium text-muted-foreground line-through mb-1">{formatPrice(Number(product.originalPrice))}</span>
