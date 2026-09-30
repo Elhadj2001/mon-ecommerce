@@ -1,10 +1,19 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowUp, MessageCircle } from 'lucide-react'
 
+// z-40 : sous le panneau panier (z-50) et le menu mobile.
+// Sur /cart, le récapitulatif de commande occupe la droite de l'écran :
+// les boutons flottants passent à gauche pour ne pas le recouvrir.
+function useFloatingOnLeft() {
+  return usePathname() === '/cart'
+}
+
 export function BackToTop() {
+  const onLeft = useFloatingOnLeft()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -20,7 +29,7 @@ export function BackToTop() {
       {visible && (
         <motion.button
           onClick={scrollTop}
-          className="fixed bottom-6 right-6 z-[500] w-12 h-12 rounded-full bg-foreground text-background flex items-center justify-center shadow-xl cursor-pointer"
+          className={`fixed bottom-6 ${onLeft ? 'left-6' : 'right-6'} z-40 w-12 h-12 rounded-full bg-foreground text-background flex items-center justify-center shadow-xl cursor-pointer`}
           initial={{ opacity: 0, y: 20, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.8 }}
@@ -37,13 +46,14 @@ export function BackToTop() {
 
 export function FloatingWhatsApp({ phone = '221770000000' }: { phone?: string }) {
   const [showTooltip, setShowTooltip] = useState(false)
+  const onLeft = useFloatingOnLeft()
 
   return (
     <motion.a
       href={`https://wa.me/${phone}?text=Bonjour%20Monsoon%2C%20j%27ai%20une%20question%20!`}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-24 right-6 z-[500] w-14 h-14 rounded-full flex items-center justify-center shadow-2xl cursor-pointer"
+      className={`fixed bottom-24 ${onLeft ? 'left-6' : 'right-6'} z-40 w-14 h-14 rounded-full flex items-center justify-center shadow-2xl cursor-pointer`}
       style={{ background: 'linear-gradient(135deg, #25D366, #128C7E)' }}
       initial={{ opacity: 0, scale: 0 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -58,13 +68,13 @@ export function FloatingWhatsApp({ phone = '221770000000' }: { phone?: string })
       <AnimatePresence>
         {showTooltip && (
           <motion.div
-            className="absolute right-16 bg-white text-[#09090b] text-xs font-bold px-3 py-2 rounded-lg shadow-xl whitespace-nowrap pointer-events-none"
-            initial={{ opacity: 0, x: 10, scale: 0.9 }}
+            className={`absolute ${onLeft ? 'left-16' : 'right-16'} bg-white text-[#09090b] text-xs font-bold px-3 py-2 rounded-lg shadow-xl whitespace-nowrap pointer-events-none`}
+            initial={{ opacity: 0, x: onLeft ? -10 : 10, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 10, scale: 0.9 }}
+            exit={{ opacity: 0, x: onLeft ? -10 : 10, scale: 0.9 }}
           >
             Nous écrire 👋
-            <div className="absolute right-[-6px] top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45" />
+            <div className={`absolute ${onLeft ? 'left-[-6px]' : 'right-[-6px]'} top-1/2 -translate-y-1/2 w-3 h-3 bg-white rotate-45`} />
           </motion.div>
         )}
       </AnimatePresence>

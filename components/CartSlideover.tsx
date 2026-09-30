@@ -59,6 +59,11 @@ export function CartSlideover() {
 
   const handleCheckoutClick = () => {
     cart.onClose()
+    router.push('/checkout')
+  }
+
+  const handleViewCartClick = () => {
+    cart.onClose()
     router.push('/cart')
   }
 
@@ -212,7 +217,13 @@ export function CartSlideover() {
                      onClick={handleCheckoutClick}
                      className="w-full flex items-center justify-center py-3 px-4 rounded-md bg-foreground text-background font-semibold hover:opacity-90 transition-opacity uppercase text-sm"
                    >
-                     Voir le panier complet
+                     Passer commande
+                   </button>
+                   <button
+                     onClick={handleViewCartClick}
+                     className="w-full text-center text-xs font-medium underline underline-offset-4 text-muted-foreground hover:text-foreground transition-colors"
+                   >
+                     Voir le panier
                    </button>
                    <button
                      onClick={cart.onClose}
