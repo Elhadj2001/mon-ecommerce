@@ -99,7 +99,7 @@ body {
 
 /* On cache le curseur natif UNIQUEMENT sur les écrans avec souris */
 @media (hover: hover) and (pointer: fine) {
-  body {
+  body:has(.custom-cursor) {
     cursor: none;
   }
 }
