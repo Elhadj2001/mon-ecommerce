@@ -38,6 +38,28 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; description: strin
   },
 ]
 
+// Zones de livraison : le tarif se déduit de la région choisie dans la liste
+const SHIPPING_ZONES: { group: string; feeEur: number; inSenegal: boolean; regions: string[] }[] = [
+  {
+    group: 'Dakar',
+    feeEur: 0,
+    inSenegal: true,
+    regions: ['Dakar', 'Pikine', 'Guédiawaye', 'Rufisque', 'Keur Massar'],
+  },
+  {
+    group: 'Autres régions du Sénégal',
+    feeEur: 4.57, // ~3000 FCFA
+    inSenegal: true,
+    regions: ['Thiès', 'Diourbel', 'Fatick', 'Kaffrine', 'Kaolack', 'Kédougou', 'Kolda', 'Louga', 'Matam', 'Saint-Louis', 'Sédhiou', 'Tambacounda', 'Ziguinchor'],
+  },
+  {
+    group: 'Hors Sénégal',
+    feeEur: 22.87, // ~15000 FCFA
+    inSenegal: false,
+    regions: ['Hors Sénégal'],
+  },
+]
+
 export default function CheckoutPage() {
   const cart = useCart()
   const router = useRouter()
@@ -76,32 +98,24 @@ export default function CheckoutPage() {
     return total + Number(item.price) * item.quantity
   }, 0)
 
-  // Calcul des frais de livraison automatiques
-  const city = formData.city.toLowerCase().trim()
+  // Calcul des frais de livraison : tarif de la zone de la région choisie
+  const zone = SHIPPING_ZONES.find(z => z.regions.includes(formData.city))
   let shippingEur = 0
   let shippingLabel = 'Sélectionnez une ville'
-  
+
   // Vérifier si le panier contient au moins un article avec la livraison gratuite
   const hasFreeShippingItem = cart.items.some(item => item.isFreeShipping)
 
-  if (city) {
-    if (city === 'dakar' || city.includes('dakar')) {
-      shippingEur = 0
+  if (zone) {
+    if (zone.feeEur === 0) {
       shippingLabel = 'Gratuite (Dakar)'
-    } else if (['thiès', 'thies', 'saint-louis', 'saint louis', 'kaolack', 'ziguinchor', 'mbour', 'touba', 'rufisque', 'diourbel', 'tambacounda', 'louga', 'matam', 'fatick', 'kolda', 'kédougou', 'kedougou', 'sédhiou', 'sedhiou', 'kaffrine', 'senegal', 'sénégal'].some(v => city.includes(v))) {
+    } else if (zone.inSenegal && hasFreeShippingItem) {
       // Si la livraison est gratuite et que le client est au Sénégal
-      if (hasFreeShippingItem) {
-        shippingEur = 0
-        shippingLabel = 'Gratuite 🎉'
-      } else {
-        shippingEur = 4.57 // ~3000 FCFA
-        shippingLabel = `${convertToXof(4.57).toLocaleString('fr-FR')} FCFA (Sénégal)`
-      }
+      shippingLabel = 'Gratuite 🎉'
     } else {
-      // International = toujours payant (sauf si explicitement gratuit ?)
-      // Ici, on part du principe que la gratuité c'est pour le Sénégal.
-      shippingEur = 22.87 // ~15000 FCFA
-      shippingLabel = `${convertToXof(22.87).toLocaleString('fr-FR')} FCFA (International)`
+      // International = toujours payant : la gratuité est réservée au Sénégal
+      shippingEur = zone.feeEur
+      shippingLabel = `${convertToXof(zone.feeEur).toLocaleString('fr-FR')} FCFA (${zone.inSenegal ? 'Sénégal' : 'International'})`
     }
   }
 
@@ -110,7 +124,7 @@ export default function CheckoutPage() {
   const finalSubtotalEur = Math.max(0, subtotalEur - discountEur)
   const grandTotalEur = finalSubtotalEur + shippingEur
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
@@ -256,15 +270,22 @@ export default function CheckoutPage() {
 
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-bold text-gray-700 mb-2">Ville / Région *</label>
-                    <input
-                      type="text"
+                    <select
                       name="city"
                       required
                       value={formData.city}
                       onChange={handleChange}
-                      placeholder="Ex: Dakar, Sénégal"
-                      className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground placeholder:text-muted-foreground"
-                    />
+                      className="w-full border border-border rounded-lg shadow-sm focus:border-foreground focus:ring-1 focus:ring-foreground outline-none px-4 py-3 transition bg-background text-foreground"
+                    >
+                      <option value="" disabled>Sélectionnez votre ville ou région</option>
+                      {SHIPPING_ZONES.map((shippingZone) => (
+                        <optgroup key={shippingZone.group} label={shippingZone.group}>
+                          {shippingZone.regions.map((region) => (
+                            <option key={region} value={region}>{region}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -423,7 +444,7 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Livraison</span>
                   <span className={`font-semibold ${shippingEur === 0 ? 'text-green-600' : 'text-foreground'}`}>
-                    {shippingEur === 0 && city ? '🎉 Gratuite' : shippingLabel}
+                    {shippingEur === 0 && zone ? '🎉 Gratuite' : shippingLabel}
                   </span>
                 </div>
                 {discountEur > 0 && (

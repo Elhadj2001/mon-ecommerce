@@ -314,7 +314,7 @@ export default function ProductClient({ product }: ProductClientProps) {
                         <div className="flex items-start gap-4">
                             <Truck className="w-5 h-5 mt-1 shrink-0 text-foreground" />
                             <p className="text-muted-foreground leading-relaxed">
-                                Livraison standard gratuite sous 3-5 jours ouvrables. Livraison express disponible lors du paiement (24-48h).
+                                Livraison offerte à Dakar. 3 000 FCFA vers les autres régions du Sénégal. Livraison internationale disponible.
                             </p>
                         </div>
                         <div className="flex items-start gap-4">
